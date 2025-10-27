@@ -151,6 +151,7 @@ io.on('connection', (socket) => {
           
           console.log(`[SUNUCU] Giriş başarılı: ${userData.nickname}`);
           // Kullanıcı giriş yaptığında eski mesajları gönder
+          sendChannelList(socket);
           sendPastMessages(socket, MAIN_CHANNEL); 
           sendDmHistory(socket, uid);
           getAllUsers().then(users => io.to(TEAM_ID).emit('user list', users));
@@ -189,6 +190,32 @@ io.on('connection', (socket) => {
     } catch(err) {
         console.error('Profil güncelleme hatası:', err.message);
         socket.emit('profile update error', 'Profil güncellenirken bir hata oluştu.');
+    }
+  });
+
+  // ------------------------------------
+  // KANAL YÖNETİMİ
+  // ------------------------------------
+  socket.on('create-channel', async ({ name, type }) => {
+    if (!name || (type !== 'text' && type !== 'voice')) {
+      // Geçersiz istek, belki bir hata mesajı gönderilebilir.
+      return;
+    }
+    try {
+      const docRef = await db.collection('channels').add({ name, type });
+      const newChannel = { id: docRef.id, name, type };
+      io.to(TEAM_ID).emit('channel-created', newChannel);
+    } catch (error) {
+      console.error('Kanal oluşturma hatası:', error);
+    }
+  });
+
+  socket.on('delete-channel', async (channelId) => {
+    try {
+      await db.collection('channels').doc(channelId).delete();
+      io.to(TEAM_ID).emit('channel-deleted', channelId);
+    } catch (error) {
+      console.error('Kanal silme hatası:', error);
     }
   });
 
@@ -336,6 +363,21 @@ async function sendPastMessages(socket, channelId) {
         socket.emit('past messages', { channelId, messages: pastMessages });
     } catch (error) {
         console.error('Geçmiş mesajları çekerken hata:', error);
+    }
+}
+
+// Tüm kanalları veritabanından çekip gönderen fonksiyon
+async function sendChannelList(socket) {
+    try {
+        const channelsSnapshot = await db.collection('channels').get();
+        const channels = [];
+        channelsSnapshot.forEach(doc => {
+            channels.push({ id: doc.id, ...doc.data() });
+        });
+        // İstemciye sadece istek atan kullanıcıya gönder
+        socket.emit('channel-list', channels);
+    } catch (error) {
+        console.error('Kanal listesi çekerken hata:', error);
     }
 }
 
