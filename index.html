@@ -3,7 +3,7 @@
 <html lang="tr"> 
 <head>
     <meta charset="UTF-8">
-    <title>AuraChat - Giriş ve Kayıt</title>
+    <title>AuraChat</title>
     <style>
         /* CSS aynı kalıyor, görsel temaya uygun */
         :root {
@@ -72,6 +72,9 @@
         .channel-item.new-message-highlight {
             background-color: var(--color-link);
             color: white;
+        }
+        .channel-item.new-message-highlight:hover {
+            background-color: #7c4ee4; /* Vurguluyken hover rengi */
         }
         
         /* KANAL ALTINDAKİ ÜYE KARTLARI */ 
@@ -725,7 +728,7 @@
             
             document.querySelectorAll('.channel-item').forEach(el => el.classList.remove('active-channel'));
             const newChannelElement = document.querySelector(`.channel-item[data-id="${newChannelId}"]`);
-            if (newChannelElement) {
+            if (newChannelElement) { 
                 newChannelElement.classList.add('active-channel');
                 newChannelElement.classList.remove('new-message-highlight'); // Vurguyu kaldır
             } 
@@ -813,6 +816,13 @@
             });
             // Belgenin herhangi bir yerine tıklayınca bağlam menüsünü gizle
             document.addEventListener('click', () => { userContextMenu.style.display = 'none'; });
+        });
+        // 💡 DÜZELTME: Kullanıcı listelerine tıklama olayını dinleyen kod eklendi.
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('users-online').addEventListener('click', (e) => {
+                const targetUserItem = e.target.closest('.user-list-item');
+                if (targetUserItem) openDmChannel(targetUserItem.dataset.uid, targetUserItem.dataset.nickname);
+            });
         });
         document.addEventListener('click', () => { channelContextMenu.style.display = 'none'; });
 
