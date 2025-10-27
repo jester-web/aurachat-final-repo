@@ -38,7 +38,7 @@ function createWindow() {
     setTimeout(() => { // Yüklemenin çok hızlı bitmesi durumunda bile splash'in kısa bir süre görünmesi için
         splashWindow.destroy();
         mainWindow.show();
-    }, 500); // Yarım saniye bekle
+    }, 1500); // Yarım saniye bekle
   });
   mainWindow.loadFile('index.html'); // Ana pencere içeriğini yüklemeye başla
 
@@ -87,3 +87,4 @@ app.whenReady().then(() => {
 app.on('window-all-closed', function () {
   if (process.platform !== 'darwin') app.quit();
 });
+
