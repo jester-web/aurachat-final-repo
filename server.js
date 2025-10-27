@@ -147,14 +147,20 @@ io.on('connection', (socket) => {
           
           socket.join(TEAM_ID); 
 
-          socket.emit('login success', { nickname: userData.nickname, avatarUrl: userData.avatarUrl });
+          // 💡 DÜZELTME: İstemcinin UID'yi alabilmesi için login success olayına uid eklendi.
+          socket.emit('login success', { nickname: userData.nickname, avatarUrl: userData.avatarUrl, uid: uid });
           
           console.log(`[SUNUCU] Giriş başarılı: ${userData.nickname}`);
-          // Kullanıcı giriş yaptığında eski mesajları gönder
-          sendChannelList(socket);
-          sendPastMessages(socket, MAIN_CHANNEL); 
-          sendDmHistory(socket, uid);
-          getAllUsers().then(users => io.to(TEAM_ID).emit('user list', users));
+
+          // 💡 DÜZELTME: Tüm başlangıç verilerinin gönderilmesi beklenip ardından 'initial data loaded' olayı tetikleniyor.
+          // Bu, istemcinin yükleme ekranında takılı kalmasını engeller.
+          await Promise.all([
+              sendChannelList(socket),
+              sendPastMessages(socket, MAIN_CHANNEL),
+              sendDmHistory(socket, uid),
+              getAllUsers().then(users => io.to(TEAM_ID).emit('user list', users))
+          ]);
+          socket.emit('initial data loaded');
 
       } catch (err) {
           // Firebase kimlik doğrulama hatası (örneğin, yanlış şifre)
