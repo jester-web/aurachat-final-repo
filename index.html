@@ -35,37 +35,57 @@
 
         /* UYGULAMA EKRANI */
         #app-screen { display: none; width: 100%; height: 100%; flex-direction: row; }
-        #channels { width: 220px; padding: 15px 0; background-color: var(--bg-medium); border-right: 1px solid var(--border-color); overflow-y: auto; }
-        #channels h4 { padding: 0 15px; margin-top: 15px; margin-bottom: 10px; color: #A0AEC0; font-size: 0.85em; text-transform: uppercase; }
-        .channel-item { padding: 8px 15px; margin: 2px 8px; cursor: pointer; border-radius: 6px; font-weight: 500;}
-        .active-channel { background-color: var(--color-link); color: white; }
+        #channels { width: 240px; background-color: var(--bg-medium); display: flex; flex-direction: column; }
+        .channels-list { flex-grow: 1; padding: 15px 0; overflow-y: auto; }
+        .channels-list h4 { padding: 0 15px; margin-top: 20px; margin-bottom: 8px; color: #8a929b; font-size: 0.8em; font-weight: 600; text-transform: uppercase; }
+        .channel-item { display: flex; align-items: center; padding: 8px 15px; margin: 1px 8px; cursor: pointer; border-radius: 5px; font-weight: 500; color: #b9bbbe; transition: background-color 0.15s, color 0.15s; }
+        .channel-item:hover { background-color: var(--bg-light); color: var(--color-text); }
+        .active-channel { background-color: #393c43; color: white; }
         
         /* KANAL ALTINDAKİ ÜYE KARTLARI */
-        .voice-user-list { margin-bottom: 10px; }
-        .voice-user-container { display: flex; align-items: center; padding: 4px 15px 4px 15px; margin-left: 10px; margin-right: 10px; margin-bottom: 4px; border-radius: 4px; background-color: var(--bg-dark); border: 1px solid var(--border-color); }
-        .voice-user-container.speaking-user { border-color: var(--color-success); box-shadow: 0 0 3px rgba(52, 211, 153, 0.8); }
-        .voice-user-avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; margin-right: 8px; border: 1px solid var(--border-color); }
-        .voice-user-name { flex-grow: 1; font-size: 0.9em; }
+        .voice-user-list { padding-left: 15px; margin-top: 5px; }
+        .voice-user-container { display: flex; align-items: center; padding: 5px 10px; margin: 2px 8px; border-radius: 5px; transition: background-color 0.15s; }
+        .voice-user-container:hover { background-color: #393c43; }
+        .voice-user-avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; margin-right: 10px; border: 2px solid transparent; transition: border-color 0.2s; }
+        .voice-user-container.speaking-user .voice-user-avatar { border-color: var(--color-success); }
+        .voice-user-name { flex-grow: 1; font-size: 0.9em; color: #b9bbbe; }
+        .voice-user-icons { display: flex; gap: 5px; color: var(--color-danger); }
 
         /* CHAT */
-        #chat-main { flex-grow: 1; display: flex; flex-direction: column; }
-        #messages { flex-grow: 1; overflow-y: auto; padding: 20px; background-color: var(--bg-light); }
-        .user-msg { margin-bottom: 15px; line-height: 1.5; border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding-bottom: 10px; }
-        .nickname { font-weight: bold; color: white; margin-right: 10px; }
+        #chat-main { flex-grow: 1; display: flex; flex-direction: column; background-color: var(--bg-light); }
+        #chat-header { padding: 12px 20px; border-bottom: 1px solid var(--bg-dark); font-weight: 600; color: white; box-shadow: 0 1px 0 rgba(0,0,0,0.2); }
+        #messages { flex-grow: 1; overflow-y: auto; padding: 20px; }
+        .user-msg { display: flex; align-items: flex-start; margin-bottom: 15px; line-height: 1.4; }
+        .msg-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; margin-right: 15px; }
+        .msg-content .nickname { font-weight: 500; color: white; margin-right: 8px; }
+        .msg-content .timestamp { font-size: 0.75em; color: #72767d; }
+        .msg-text { color: var(--color-text); }
+        .system-msg { color: #8a929b; text-align: center; margin: 10px 0; font-style: italic; }
 
         /* INPUT */
-        #input-area { padding: 15px 20px; display: flex; gap: 15px; background-color: var(--bg-light); border-top: 1px solid var(--border-color); }
-        .status-btn { padding: 10px 15px; cursor: pointer; background-color: var(--bg-medium); color: var(--color-text); border: none; border-radius: 6px; }
-        #leave-btn { background-color: var(--color-danger); color: white; display: none; }
+        #input-area { padding: 0 20px 20px 20px; }
+        #message-input { width: 100%; padding: 12px; border: none; border-radius: 8px; background-color: var(--bg-medium); color: var(--color-text); font-size: 1em; }
+        #message-input:focus { outline: none; }
+
+        /* ÇEVRİMİÇİ KULLANICILAR */
+        #users-online { width: 240px; background-color: var(--bg-medium); padding: 15px 0; border-left: 1px solid var(--border-color); overflow-y: auto; }
+        #users-online h4 { padding: 0 20px; margin-top: 5px; margin-bottom: 10px; color: #8a929b; font-size: 0.8em; font-weight: 600; text-transform: uppercase; }
+        .user-list-item { display: flex; align-items: center; padding: 6px 20px; }
+        .user-list-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; margin-right: 12px; }
+        .user-list-name { color: #b9bbbe; font-weight: 500; }
 
         /* PROFIL */
         #profile-bar {
-            position: fixed; bottom: 0; left: 0; width: 220px; 
-            background-color: var(--bg-dark); padding: 8px 10px; 
-            border-top: 1px solid var(--border-color);
+            width: 240px; background-color: #202225; padding: 8px; 
             display: flex; align-items: center; justify-content: space-between;
         }
-        #my-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; margin-right: 8px; cursor: pointer; }
+        .profile-info { display: flex; align-items: center; cursor: pointer; }
+        #my-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; margin-right: 8px; }
+        #my-nickname { font-weight: 600; font-size: 0.9em; }
+        .profile-controls { display: flex; align-items: center; gap: 5px; }
+        .control-btn { background: none; border: none; color: #b9bbbe; font-size: 1.2em; padding: 5px; border-radius: 4px; cursor: pointer; transition: background-color 0.15s; }
+        .control-btn:hover { background-color: #393c43; }
+        .control-btn.active-status { color: var(--color-danger); }
     </style>
 </head>
 <body>
@@ -90,27 +110,36 @@
     <div id="app-screen">
         
         <div id="channels">
-            <h4>METİN KANALLARI</h4>
-            <div class="channel-item active-channel" data-type="chat" data-id="ana-sohbet-kanali"># genel-sohbet</div>
+            <div class="channels-list">
+                <h4>METİN KANALLARI</h4>
+                <div class="channel-item active-channel" data-type="chat" data-id="ana-sohbet-kanali"># genel-sohbet</div>
 
-            <h4>SES KANALLARI</h4>
-            <div class="voice-channel-group">
-                <div class="channel-item" data-type="voice" data-id="ana-ses-odasi">🔊 Ana Ses Odası</div>
-                <div class="voice-user-list" data-channel-id="ana-ses-odasi"></div>
+                <h4>SES KANALLARI</h4>
+                <div class="voice-channel-group">
+                    <div class="channel-item" data-type="voice" data-id="ana-ses-odasi">🔊 Ana Ses Odası</div>
+                    <div class="voice-user-list" data-channel-id="ana-ses-odasi"></div>
+                </div>
+            </div>
+            <div id="profile-bar">
+                <div class="profile-info" onclick="openSettings()">
+                    <img id="my-avatar" src="" alt="Avatar">
+                    <span id="my-nickname">Yükleniyor...</span>
+                </div>
+                <div class="profile-controls">
+                    <button id="mute-btn" class="control-btn" onclick="toggleMute()" disabled>🎤</button>
+                    <button id="deafen-btn" class="control-btn" onclick="toggleDeafen()" disabled>🎧</button>
+                    <button id="settings-btn" class="control-btn" onclick="openSettings()">⚙️</button>
+                </div>
             </div>
         </div>
 
         <div id="chat-main">
+            <div id="chat-header"># genel-sohbet</div>
             <div id="messages">
                 <p class="system-msg">Uygulama yükleniyor...</p>
             </div>
             
             <div id="input-area">
-                <button id="voice-btn" class="status-btn" onclick="joinChannel('ana-ses-odasi', 'voice')" disabled>🔊 Kanala Katıl</button> 
-                <button id="leave-btn" class="status-btn" onclick="leaveCurrentVoiceChannel()">❌ Bağlantıyı Kes</button>
-                <button id="mute-btn" class="status-btn" onclick="toggleMute()" disabled>🎤 Mute</button>
-                <button id="deafen-btn" class="status-btn" onclick="toggleDeafen()" disabled>🎧 Deafen</button>
-                
                 <input type="text" id="message-input" placeholder="Mesaj gönder (Enter)..." disabled>
             </div>
         </div>
@@ -119,12 +148,6 @@
             <h4>ÇEVRİMİÇİ KULLANICILAR</h4>
             <ul id="user-list"></ul>
         </div>
-    </div>
-
-    <div id="profile-bar">
-        <img id="my-avatar" src="" alt="Avatar">
-        <span id="my-nickname">Kullanıcı Yükleniyor...</span>
-        <span id="settings-btn" onclick="openSettings()">⚙️</span>
     </div>
 
     <div id="settings-modal">
@@ -154,10 +177,7 @@
         
         const messages = document.getElementById('messages');
         const input = document.getElementById('input-message');
-        const userList = document.getElementById('user-list');
-        const joinBtn = document.getElementById('voice-btn');
-        const leaveBtn = document.getElementById('leave-btn');
-        const muteBtn = document.getElementById('mute-btn');
+        const userList = document.getElementById('user-list');        const muteBtn = document.getElementById('mute-btn');
         const deafenBtn = document.getElementById('deafen-btn');
         const authTitle = document.getElementById('auth-title');
         const authMainBtn = document.getElementById('auth-main-btn');
@@ -167,7 +187,6 @@
         const emailInput = document.getElementById('email-input');
         const passwordInput = document.getElementById('password-input');
 
-        const profileBar = document.getElementById('profile-bar');
         const myAvatar = document.getElementById('my-avatar');
         const myNickname = document.getElementById('my-nickname');
 
@@ -272,7 +291,6 @@
                 loginScreen.style.display = 'none';
                 appScreen.style.display = 'flex';
                 input.disabled = false;
-                joinBtn.disabled = false;
                 
                 myAvatar.src = data.avatarUrl; 
                 myNickname.textContent = data.nickname;
@@ -301,8 +319,11 @@
             socket.on('chat message', (data) => {
                 if (data.channel === currentChatChannel) {
                     const item = document.createElement('p');
-                    item.className = 'user-msg';
-                    item.innerHTML = `<span class="nickname">${data.nickname}:</span> ${data.message}`; 
+                    item.className = 'user-msg'; 
+                    item.innerHTML = `
+                        <img src="${data.avatarUrl}" alt="avatar" class="msg-avatar">
+                        <div class="msg-content"><span class="nickname">${data.nickname}</span><span class="timestamp">${new Date(data.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span><div class="msg-text">${data.message}</div></div>
+                    `;
                     messages.appendChild(item);
                     messages.scrollTop = messages.scrollHeight;
                 }
@@ -322,12 +343,12 @@
                         const listContainer = document.querySelector(`.voice-user-list[data-channel-id="${channelId}"]`);
 
                         if (listContainer) {
-                            const userCard = document.createElement('div');
+                            const userCard = document.createElement('div'); 
                             userCard.className = 'voice-user-container';
-                            if (status.speaking && !status.muted) userCard.classList.add('speaking-user');
+                            if (status.speaking && !status.muted) userCard.classList.add('speaking-user'); 
                             
                             let statusIcons = '';
-                            if (status.muted) statusIcons += '<span class="muted-icon">🔇</span>';
+                            if (status.muted) statusIcons += '<span class="muted-icon">🎤</span>';
                             if (status.deafened) statusIcons += '<span class="deafened-icon">🔕</span>';
 
                             userCard.innerHTML = `
@@ -342,7 +363,10 @@
                     // 2. Tüm Çevrimiçi Kullanıcılar (SAĞ LİSTE)
                     const li = document.createElement('li');
                     li.className = 'user-list-item';
-                    li.innerHTML = `<span>${user.nickname}</span>`;
+                    li.innerHTML = `
+                        <img src="${user.avatarUrl}" alt="avatar" class="user-list-avatar">
+                        <span class="user-list-name">${user.nickname}</span>
+                    `;
                     userList.appendChild(li);
                 });
             });
@@ -391,6 +415,7 @@
         function switchChatChannel(newChannelId) {
             currentChatChannel = newChannelId;
             messages.innerHTML = `<p class="system-msg">#${newChannelId} kanalına geçildi.</p>`;
+            document.getElementById('chat-header').textContent = `# ${newChannelId}`;
         }
 
         function joinChannel(channelId, channelType) {
@@ -398,7 +423,9 @@
                 if (!socket || !socket.connected) return alert('Önce giriş yapın.');
                 if (currentVoiceChannel === channelId) return;
                 
-                if (currentVoiceChannel) { leaveVoiceChannel(currentVoiceChannel); }
+                if (currentVoiceChannel) { 
+                    leaveCurrentVoiceChannel();
+                }
 
                 currentVoiceChannel = channelId;
                 joinVoiceChannel(channelId);
@@ -414,8 +441,11 @@
                     const id = e.target.getAttribute('data-id');
                     const type = e.target.getAttribute('data-type');
                     
-                    document.querySelectorAll('.channel-item').forEach(el => el.classList.remove('active-channel'));
-                    e.target.classList.add('active-channel');
+                    // Sadece metin kanalları için active-channel sınıfını değiştir
+                    if (type === 'chat') {
+                        document.querySelectorAll('.channel-item[data-type="chat"]').forEach(el => el.classList.remove('active-channel'));
+                        e.target.classList.add('active-channel');
+                    }
                     
                     joinChannel(id, type);
                 };
@@ -427,16 +457,14 @@
             if (!localStream) return;
             isMuted = !isMuted;
             localStream.getAudioTracks().forEach(track => { track.enabled = !isMuted; });
-            muteBtn.textContent = isMuted ? '🔇 Muted' : '🎤 Mute';
             muteBtn.classList.toggle('active-status');
             if (isMuted && isSpeaking) { socket.emit('toggle speaking', false); } else if (!isMuted && isSpeaking) { socket.emit('toggle speaking', true); }
             socket.emit('toggle status', { status: 'mute', value: isMuted });
         }
         function toggleDeafen() { 
             isDeafened = !isDeafened;
-            if (isDeafened && !isMuted) { toggleMute(); }
+            if (isDeafened && !isMuted) { toggleMute(); } // Sağırlaştırınca otomatik sustur
             document.querySelectorAll('audio').forEach(audioElement => { audioElement.muted = isDeafened; });
-            deafenBtn.textContent = isDeafened ? '🔕 Deafened' : '🎧 Deafen';
             deafenBtn.classList.toggle('active-status');
             socket.emit('toggle status', { status: 'deafen', value: isDeafened });
         }
@@ -452,14 +480,11 @@
             socket.emit('leave voice channel', channelId);
             currentVoiceChannel = null;
             
-            joinBtn.style.display = 'block';
-            leaveBtn.style.display = 'none';
-            joinBtn.disabled = false;
             muteBtn.disabled = true; deafenBtn.disabled = true; 
             
             isMuted = false; isDeafened = false;
-            muteBtn.textContent = '🎤 Mute'; muteBtn.classList.remove('active-status');
-            deafenBtn.textContent = '🎧 Deafen'; deafenBtn.classList.remove('active-status');
+            muteBtn.classList.remove('active-status');
+            deafenBtn.classList.remove('active-status');
         }
 
         function startVolumeDetection() {
@@ -492,8 +517,6 @@
                 .then(stream => {
                     localStream = stream;
                     
-                    joinBtn.style.display = 'none';
-                    leaveBtn.style.display = 'block';
                     muteBtn.disabled = false; deafenBtn.disabled = false; 
 
                     socket.emit('join voice channel', channelId); 
@@ -512,6 +535,7 @@
             
             pc.ontrack = (event) => {
                 const remoteAudio = document.createElement('audio');
+                remoteAudio.id = `audio-${userId}`;
                 remoteAudio.autoplay = true;
                 document.body.appendChild(remoteAudio); 
             };
