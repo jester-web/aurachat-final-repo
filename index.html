@@ -40,16 +40,36 @@
         .title-bar-btn:hover { background-color: #393c43; }
         #close-btn:hover { background-color: #e81123; color: white; }
 
-        body { display: flex; flex-direction: column; margin: 0; height: 100vh; font-family: 'Inter', sans-serif; background-color: var(--bg-dark); color: var(--color-text); overflow: hidden; padding-top: 32px; box-sizing: border-box; }
-        #login-screen { display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%; height: 100%; background-color: var(--bg-dark); position: fixed; top: 0; left: 0; z-index: 100; }
-        .login-box { background-color: var(--bg-medium); padding: 40px 50px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4); text-align: center; border: 1px solid var(--border-color); }
+        body { display: flex; flex-direction: column; margin: 0; height: 100vh; font-family: 'Inter', sans-serif; background-color: var(--bg-dark); color: var(--color-text); overflow: hidden; padding-top: 32px; box-sizing: border-box; background: linear-gradient(-45deg, #2E1C2B, #3E2C41, #1a2a3f, #4F3A58); background-size: 400% 400%; animation: gradientBG 15s ease infinite; }
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        #login-screen { display: none; flex-direction: column; justify-content: center; align-items: center; width: 100%; height: 100%; position: fixed; top: 0; left: 0; z-index: 100; }
+        .login-box { 
+            background-color: rgba(39, 42, 50, 0.85); /* Hafif şeffaf */
+            padding: 40px 50px; 
+            border-radius: 12px; 
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5); 
+            text-align: center; 
+            border: 1px solid var(--border-color);
+            backdrop-filter: blur(10px); /* Arka planı bulanıklaştırır (destekleyen tarayıcılarda) */
+            animation: fadeInFromBottom 0.6s ease-out forwards;
+            opacity: 0;
+        }
+        @keyframes fadeInFromBottom {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
         .login-box form { display: flex; flex-direction: column; }
         #login-screen h2 { margin-bottom: 25px; color: white; font-size: 1.8em; }
         #login-screen input { padding: 14px; margin-bottom: 15px; width: 320px; border-radius: 8px; border: 1px solid var(--border-color); background-color: var(--bg-dark); color: var(--color-text); font-size: 1em; transition: border-color 0.3s, box-shadow 0.3s; }
         #login-screen input:focus { outline: none; border-color: var(--color-link); box-shadow: 0 0 5px rgba(139, 90, 246, 0.5); }
         #login-screen .app-icon {
-            width: 80px; /* İkon boyutu */
-            height: 80px;
+            width: 70px;
+            height: 70px;
             margin-bottom: 20px; /* Başlık ile arasında boşluk */
         }
         #nickname-input-container { max-height: 0; overflow: hidden; transition: max-height 0.4s ease-in-out; }
@@ -60,6 +80,30 @@
         #toggle-auth-btn { background: none; border: none; color: var(--color-link); text-decoration: underline; font-size: 0.9em; margin-top: 20px; cursor: pointer; }
         #toggle-auth-btn:hover { color: #a482f7; }
 
+        /* YÜKLEME EKRANI */
+        #loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-dark);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000; /* En üstte olması için */
+            flex-direction: column;
+            gap: 20px;
+        }
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #444;
+            border-top-color: var(--color-link);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
         /* UYGULAMA EKRANI */
         #app-screen { display: none; width: 100%; height: 100%; flex-direction: row; flex-grow: 1; }
@@ -217,6 +261,10 @@
     </style>
 </head>
 <body>
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+        <p>Yükleniyor...</p>
+    </div>
     
     <div id="title-bar">
         <div id="title-bar-left">
@@ -338,6 +386,7 @@
     <script>
         let socket;
 
+        const loadingOverlay = document.getElementById('loading-overlay');
         const loginScreen = document.getElementById('login-screen');
         const appScreen = document.getElementById('app-screen');
         const errorDisplay = document.getElementById('login-error');
@@ -445,9 +494,23 @@
 
             initializeSocketEvents(); // Soket olay dinleyicilerini başlat
 
+        }
+        
+        function initializeSocketEvents() {
+            if (!socket) return;
+
+            // Bu fonksiyon, soket olaylarını yalnızca bir kez tanımlar.
+            // Her giriş denemesinde tekrar tekrar tanımlanmasını önler.
+
+            socket.off(); // Önceki tüm dinleyicileri temizle (güvenlik önlemi)
+            console.log('[Socket.IO] Önceki olay dinleyicileri temizlendi.');
+
+            // --- AUTH OLAYLARI ---
             socket.on('connect', () => {
                 console.log('[Socket.IO] Sunucuya başarıyla bağlandı!');
-                console.log('Sunucuya başarıyla bağlandı!');
+                const email = emailInput.value.trim();
+                const password = passwordInput.value;
+                const nickname = nicknameInput.value.trim();
                 const authData = { email, password };
                 if (authMode === 'register') { authData.nickname = nickname; }
 
@@ -467,48 +530,11 @@
 
             socket.on('auth success', (data) => {
                 if (data.type === 'register') {
-                    // Kayıt başarılı olduğunda otomatik olarak giriş moduna geç
-                    emailInput.value = '';
-                    passwordInput.value = '';
-                    nicknameInput.value = '';
-                    toggleAuthMode();
-                    // Kullanıcıya bilgi ver
-                    errorDisplay.textContent = 'Kayıt başarılı! Lütfen giriş yapın.';
-                    authMainBtn.disabled = false; // Butonu tekrar aktif et
+                    // Kayıt başarılı, şimdi otomatik olarak giriş yapalım.
+                    console.log('[Auth] Kayıt başarılı, otomatik giriş yapılıyor...');
+                    socket.emit('login', { email: emailInput.value.trim(), password: passwordInput.value });
                 }
             });
-
-            socket.on('login success', (data) => {
-                console.log('[Auth] Giriş başarılı:', data.nickname);
-                loginScreen.style.display = 'none';
-                myUid = data.uid; // Kendi UID'mizi sakla
-                appScreen.style.display = 'flex';
-                messageInput.disabled = false;
-                sendButton.disabled = false;
-                
-                myAvatar.src = data.avatarUrl; 
-                myNickname.textContent = data.nickname;
-
-                messages.innerHTML = `<p class="system-msg">Hoş geldin ${data.nickname}, ana kanala katıldın.</p>`;
-            });
-
-            socket.on('connect_error', (error) => {
-                console.error('[Socket.IO] Bağlantı Hatası:', error);
-                errorDisplay.textContent = `Bağlantı Hatası: Sunucuya erişilemiyor.`;
-                authMainBtn.disabled = false;
-                authMainBtn.textContent = authMode === 'login' ? 'Giriş Yap' : 'Kayıt Ol';
-                if (socket) socket.disconnect();
-            });
-        }
-        
-        function initializeSocketEvents() {
-            if (!socket) return;
-
-            // Bu fonksiyon, soket olaylarını yalnızca bir kez tanımlar.
-            // Her giriş denemesinde tekrar tekrar tanımlanmasını önler.
-
-            socket.off(); // Önceki tüm dinleyicileri temizle (güvenlik önlemi)
-            console.log('[Socket.IO] Önceki olay dinleyicileri temizlendi.');
 
             // --- SUNUCUDAN GELEN OLAYLARI DİNLEME ---
             socket.on('typing', (data) => {
@@ -548,6 +574,33 @@
                         });
                     }
                 }
+            });
+
+            socket.on('login success', (data) => {
+                console.log('[Auth] Giriş başarılı:', data.nickname);
+                loadingOverlay.style.display = 'flex'; // Yükleme ekranını göster
+                loginScreen.style.display = 'none';
+                myUid = data.uid; // Kendi UID'mizi sakla
+                
+                myAvatar.src = data.avatarUrl; 
+                myNickname.textContent = data.nickname;
+
+                messages.innerHTML = `<p class="system-msg">Hoş geldin ${data.nickname}, ana kanala katıldın.</p>`;
+            });
+
+            socket.on('initial data loaded', () => {
+                loadingOverlay.style.display = 'none'; // Yükleme ekranını gizle
+                appScreen.style.display = 'flex'; // Uygulama ekranını göster
+                messageInput.disabled = false;
+                sendButton.disabled = false;
+            });
+
+            socket.on('connect_error', (error) => {
+                console.error('[Socket.IO] Bağlantı Hatası:', error);
+                errorDisplay.textContent = `Bağlantı Hatası: Sunucuya erişilemiyor.`;
+                authMainBtn.disabled = false;
+                authMainBtn.textContent = authMode === 'login' ? 'Giriş Yap' : 'Kayıt Ol';
+                if (socket) socket.disconnect();
             });
 
             // Kullanıcı Listesini Güncelleme
@@ -649,21 +702,7 @@
                 }
             });
 
-            socket.on('dm history', async (dmChannels) => {
-                const allUsers = [...userList.children, ...userListOffline.children];
-                dmChannels.forEach(dm => {
-                    const otherUserElement = Array.from(allUsers).find(el => el.dataset.uid === dm.otherUserUid);
-                    if (otherUserElement) {
-                        const nickname = otherUserElement.dataset.nickname;
-                        ensureDmChannelExists(dm.otherUserUid, nickname);
-                    } else {
-                        // Eğer kullanıcı listede yoksa (eski bir kullanıcı olabilir),
-                        // sunucudan bu kullanıcının bilgisini ayrıca istemek gerekebilir.
-                        // Şimdilik bu durumu atlıyoruz.
-                        console.warn(`DM geçmişinde bulunan ${dm.otherUserUid} UID'li kullanıcı, mevcut kullanıcı listesinde bulunamadı.`);
-                    }
-                });
-            });
+            // socket.on('dm history', ...); // TODO: Bu özellik daha sonra düzeltilecek.
 
             // --- SES KANALI MANTIĞI ---       
             socket.on('user joined', (newUserId) => { console.log(`[Socket.IO] Kullanıcı katıldı: ${newUserId}`); if (newUserId !== socket.id) { createPeerConnection(newUserId, true); } });
@@ -761,6 +800,12 @@
 
         // --- SAYFA YÜKLENDİĞİNDE ÇALIŞACAK KODLAR ---
         document.addEventListener('DOMContentLoaded', () => { 
+            // Başlangıçta yükleme ekranını göster, sonra giriş ekranına geçir
+            setTimeout(() => {
+                loadingOverlay.style.display = 'none';
+                loginScreen.style.display = 'flex';
+            }, 1500); // 1.5 saniye bekleme süresi (isteğe bağlı)
+
             // Kanal öğelerine tıklama olayını dinle
             document.querySelectorAll('.channel-item').forEach(item => {
                 item.onclick = (e) => {
