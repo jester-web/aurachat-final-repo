@@ -18,7 +18,7 @@
             --color-online: #4CAF50; /* Yeşil */
         }
 
-        body { display: flex; margin: 0; height: 100vh; font-family: 'Inter', sans-serif; background-color: var(--bg-light); color: var(--color-text); }
+        body { display: flex; margin: 0; height: 100vh; font-family: 'Inter', sans-serif; background-color: var(--bg-light); color: var(--color-text); padding-top: 32px; box-sizing: border-box; }
         #login-screen { display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%; height: 100%; background-color: var(--bg-dark); position: absolute; z-index: 100; }
         .login-box { background-color: var(--bg-medium); padding: 40px 50px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4); text-align: center; border: 1px solid var(--border-color); }
         .login-box form { display: flex; flex-direction: column; }
@@ -33,6 +33,49 @@
         #toggle-auth-btn { background: none; border: none; color: var(--color-link); text-decoration: underline; font-size: 0.9em; margin-top: 20px; cursor: pointer; }
         #toggle-auth-btn:hover { color: #a482f7; }
 
+        /* Açık Tema */
+        body.light-theme {
+            --bg-dark: #F9FAFB;
+            --bg-medium: #F3F4F6;
+            --bg-light: #FFFFFF;
+            --color-text: #1F2937;
+            --border-color: #D1D5DB;
+        }
+        body.light-theme #title-bar { background-color: #E5E7EB; }
+        body.light-theme #title-bar-title, body.light-theme .title-bar-btn { color: #374151; }
+        body.light-theme .title-bar-btn:hover { background-color: #D1D5DB; }
+        body.light-theme #close-btn:hover { background-color: #e81123; color: white; }
+
+        /* Başlık Çubuğu (Title Bar) */
+        #title-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 32px;
+            background-color: var(--bg-dark);
+            -webkit-app-region: drag; /* Pencereyi sürüklemek için */
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 10px;
+            z-index: 200;
+        }
+        #title-bar-left {
+            display: flex;
+            align-items: center;
+        }
+        #title-bar-icon {
+            width: 20px;
+            height: 20px;
+            margin-right: 8px;
+        }
+        #title-bar-title { color: #b9bbbe; font-size: 0.9em; }
+        #title-bar-controls { -webkit-app-region: no-drag; /* Butonların tıklanabilir olması için */ display: flex; }
+        .title-bar-btn { background: none; border: none; color: #b9bbbe; font-size: 1.2em; padding: 5px 10px; cursor: pointer; transition: background-color 0.2s; }
+        .title-bar-btn:hover { background-color: #393c43; }
+        #close-btn:hover { background-color: #e81123; color: white; }
+
 
         /* UYGULAMA EKRANI */
         #app-screen { display: none; width: 100%; height: 100%; flex-direction: row; }
@@ -42,6 +85,10 @@
         .channel-item { display: flex; align-items: center; padding: 8px 15px; margin: 1px 8px; cursor: pointer; border-radius: 5px; font-weight: 500; color: #b9bbbe; transition: background-color 0.15s, color 0.15s; }
         .channel-item:hover { background-color: var(--bg-light); color: var(--color-text); }
         .active-channel { background-color: #393c43; color: white; }
+        .channel-item.new-message-highlight {
+            background-color: var(--color-link);
+            color: white;
+        }
         
         /* KANAL ALTINDAKİ ÜYE KARTLARI */ 
         .voice-user-list { padding-left: 15px; margin-top: 5px; }
@@ -114,9 +161,6 @@
         /* PROFIL */
         #profile-bar {
             width: 240px; background-color: #202225; padding: 8px; 
-            width: 100%; /* Takes full width of parent #channels-panel */
-            background-color: #202225; padding: 8px;
-            box-sizing: border-box; /* Padding'i genişliğe dahil et */
             display: flex; align-items: center; justify-content: space-between;
         }
         .profile-info { display: flex; align-items: center; cursor: pointer; }
@@ -126,12 +170,10 @@
         .control-btn { background: none; border: none; color: #b9bbbe; font-size: 1.2em; padding: 5px; border-radius: 4px; cursor: pointer; transition: background-color 0.15s; }
         .control-btn:hover { background-color: #393c43; }
         .control-btn.active-status { color: var(--color-danger); }
-
-        #server-header {
-            padding: 15px; font-size: 1.1em; font-weight: bold; color: white;
-            border-bottom: 1px solid var(--border-color);
-            box-shadow: 0 1px 0 rgba(0,0,0,0.2);
-        }
+    </style>
+    <style>
+        .control-btn.muted-icon::before { content: '🔇'; }
+        .control-btn.deafened-icon::before { content: '🔕'; }
     </style>
     <style>
         /* Settings Modal */
@@ -173,10 +215,36 @@
             text-align: center;
             min-height: 18px;
         }
+        /* Ayarlar Sekmeleri */
+        .settings-tabs { display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 20px; }
+        .tab-btn { background: none; border: none; color: #8a929b; padding: 10px 15px; cursor: pointer; font-size: 1em; border-bottom: 2px solid transparent; }
+        .tab-btn.active { color: white; border-bottom-color: var(--color-link); }
+        .tab-content { display: none; }
+        .tab-content.active { display: flex; flex-direction: column; gap: 15px; }
+
+        /* Güncelleme Bildirimi */
+        #update-notification {
+            display: none; position: fixed; bottom: 20px; right: 20px; background-color: var(--color-success); color: white; padding: 15px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 1002;
+        }
+        #update-notification button {
+            background-color: white; color: var(--color-success); border: none; padding: 5px 10px; border-radius: 5px; margin-left: 15px; cursor: pointer; font-weight: bold;
+        }
     </style>
 </head>
 <body>
     
+    <div id="title-bar">
+        <div id="title-bar-left">
+            <img id="title-bar-icon" src="./icon.png" alt="AuraChat Icon">
+            <div id="title-bar-title">AuraChat</div>
+        </div>
+        <div id="title-bar-controls">
+            <button id="minimize-btn" class="title-bar-btn">_</button>
+            <button id="maximize-btn" class="title-bar-btn">□</button>
+            <button id="close-btn" class="title-bar-btn">✕</button>
+        </div>
+    </div>
+
     <div id="login-screen">
         <div class="login-box">
             <h2 id="auth-title">Giriş Yap</h2>
@@ -197,9 +265,6 @@
     <div id="app-screen">
         
         <div id="channels">
-            <div id="server-header">
-                AuraChat
-            </div>
             <div class="channels-list">
                 <h4>METİN KANALLARI</h4>
                 <div class="channel-item active-channel" data-type="chat" data-id="ana-sohbet-kanali"># genel-sohbet</div>
@@ -220,7 +285,7 @@
                 </div>
                 <div class="profile-controls">
                     <button id="settings-btn" class="control-btn" title="Ayarlar">⚙️</button>
-                    <button id="logout-btn" class="control-btn" onclick="logout()" title="Çıkış Yap">⛔</button>
+                    <button id="logout-btn" class="control-btn" onclick="logout()" title="Çıkış Yap">🚪</button>
                 </div>
             </div>
         </div>
@@ -230,8 +295,8 @@
             <div id="voice-controls-bar">
                 <span id="voice-channel-name"></span>
                 <div class="voice-actions">
-                    <button id="mute-btn" class="control-btn" onclick="toggleMute()" disabled title="Mikrofonu Kapat/Aç">🎤</button>
-                    <button id="deafen-btn" class="control-btn" onclick="toggleDeafen()" disabled title="Kulaklığı Kapat/Aç">🎧</button>
+                    <button id="mute-btn" class="control-btn" onclick="toggleMute()" disabled title="Mikrofonu Kapat/Aç"><span>🎤</span></button>
+                    <button id="deafen-btn" class="control-btn" onclick="toggleDeafen()" disabled title="Kulaklığı Kapat/Aç"><span>🎧</span></button>
                     <button id="disconnect-voice-btn" class="control-btn" onclick="leaveCurrentVoiceChannel()" disabled title="Ses Kanalından Ayrıl">❌</button>
                 </div>
             </div>
@@ -255,18 +320,40 @@
             <ul id="user-list-offline"></ul>
         </div>
     </div>
+    <div id="update-notification">
+        Yeni bir güncelleme hazır!
+        <button id="restart-update-btn">Yeniden Başlat</button>
+    </div>
     <div id="settings-modal">
         <div class="settings-content">
-            <h3>Profil Ayarları</h3>
-            <p id="profile-error-message"></p>
+            <div class="settings-tabs">
+                <button class="tab-btn active" data-tab="profile">Profil</button>
+                <button class="tab-btn" data-tab="app">Uygulama</button>
+            </div>
 
-            <label for="setting-nickname">Kullanıcı Adı</label>
-            <input type="text" id="setting-nickname" placeholder="Yeni Kullanıcı Adı" required>
+            <div id="tab-profile" class="tab-content active">
+                <h3>Profil Ayarları</h3>
+                <p id="profile-error-message"></p>
+                <label for="setting-nickname">Kullanıcı Adı</label>
+                <input type="text" id="setting-nickname" placeholder="Yeni Kullanıcı Adı" required>
+                <label for="setting-avatar">Avatar URL</label>
+                <input type="text" id="setting-avatar" placeholder="Yeni Avatar URL'si">
+                <label for="setting-avatar-file" style="margin-top: 15px;">Veya Dosya Yükle</label>
+                <input type="file" id="setting-avatar-file" accept="image/png, image/jpeg, image/gif">
+                <button id="save-profile-btn">Kaydet</button>
+            </div>
 
-            <label for="setting-avatar">Avatar URL (Rastgele bırakmak için boş bırakın)</label>
-            <input type="text" id="setting-avatar" placeholder="Yeni Avatar URL'si">
+            <div id="tab-app" class="tab-content">
+                <h3>Uygulama Ayarları</h3>
+                <label for="setting-theme">Tema</label>
+                <select id="setting-theme">
+                    <option value="dark">Koyu</option>
+                    <option value="light">Açık</option>
+                </select>
+                <label for="setting-notifications">Masaüstü Bildirimleri (DM)</label>
+                <input type="checkbox" id="setting-notifications" checked>
+            </div>
 
-            <button id="save-profile-btn">Kaydet</button>
             <button id="close-settings-btn">Kapat</button>
         </div>
     </div>
@@ -304,8 +391,10 @@
         const settingsModal = document.getElementById('settings-modal');
         const settingNicknameInput = document.getElementById('setting-nickname');
         const settingAvatarInput = document.getElementById('setting-avatar');
+        const settingAvatarFileInput = document.getElementById('setting-avatar-file');
         const profileErrorDisplay = document.getElementById('profile-error-message');
 
+        const { ipcRenderer } = require('electron');
         let myUid = null; // Kendi UID'mizi saklamak için
         const disconnectVoiceBtn = document.getElementById('disconnect-voice-btn');
         const sendButton = document.getElementById('send-button');
@@ -454,7 +543,7 @@
             socket.on('chat message', (data) => {
                 if (data.channel === currentChatChannel) {
                     const item = document.createElement('p');
-                    item.className = 'user-msg';
+                    item.className = 'user-msg'; 
                     item.innerHTML = `
                         <img src="${data.avatarUrl}" alt="${data.nickname}" class="msg-avatar" onerror="this.onerror=null;this.src='https://i.pravatar.cc/150?img=6';"> 
                         <div class="msg-content"><div class="msg-meta"><span class="nickname">${data.nickname}</span><span class="timestamp">${new Date(data.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span></div><div class="msg-text">${md.renderInline(data.message)}</div></div>
@@ -462,11 +551,27 @@
                     messages.appendChild(item);
                     messages.scrollTop = messages.scrollHeight;
                 }
-                // Eğer aktif olmayan bir DM'den mesaj geldiyse, sol panelde o DM'i oluştur
+                // Eğer aktif olmayan bir DM'den mesaj geldiyse, sol panelde o DM'i oluştur ve vurgula
                 if (data.channel.startsWith('dm_') && data.channel !== currentChatChannel && data.senderUid !== myUid) {
                     const uids = data.channel.replace('dm_', '').split('_');
                     const otherUserUid = uids.find(uid => uid !== myUid);
+                    
+                    // DM kanalının sol panelde var olduğundan emin ol
                     ensureDmChannelExists(otherUserUid, data.nickname);
+
+                    // DM kanalını vurgula
+                    const dmChannelElement = document.querySelector(`.channel-item[data-id="${data.channel}"]`);
+                    if (dmChannelElement) {
+                        dmChannelElement.classList.add('new-message-highlight');
+                    }
+
+                    // Tarayıcı bildirimi göster
+                    if (Notification.permission === "granted" && localStorage.getItem('notificationsEnabled') !== 'false') {
+                        new Notification(`Yeni DM: ${data.nickname}`, {
+                            body: data.message.replace(/<[^>]*>?/gm, ''), // HTML etiketlerini temizle
+                            icon: data.avatarUrl
+                        });
+                    }
                 }
             });
 
@@ -502,8 +607,8 @@
                                 if (status.speaking && !status.muted) userCard.classList.add('speaking-user'); 
                                 if (status.muted) userCard.classList.add('muted');
                                 if (status.deafened) userCard.classList.add('deafened');
-                                
-                                let statusIcons = '';
+
+                                let statusIcons = ''; // Bu ikonlar zaten vardı, sadece güncelleyelim
                                 if (status.muted) statusIcons += '<span class="muted-icon">🎤</span>';
                                 if (status.deafened) statusIcons += '<span class="deafened-icon">🔕</span>';
 
@@ -559,19 +664,6 @@
                         console.warn(`DM geçmişinde bulunan ${dm.otherUserUid} UID'li kullanıcı, mevcut kullanıcı listesinde bulunamadı.`);
                     }
                 });
-            });
-            // Tarayıcı bildirim izni iste
-            if (Notification.permission === "default") {
-                Notification.requestPermission();
-            }
-            socket.on('past messages', (data) => {
-                if (data.channelId === currentChatChannel) {
-                    messages.innerHTML = ''; // Mevcut mesajları temizle 
-                    data.messages.forEach(msg => {
-                        appendChatMessage(msg);
-                    });
-                    messages.scrollTop = messages.scrollHeight;
-                }
             });
 
             // --- SES KANALI MANTIĞI ---       
@@ -637,7 +729,10 @@
             
             document.querySelectorAll('.channel-item').forEach(el => el.classList.remove('active-channel'));
             const newChannelElement = document.querySelector(`.channel-item[data-id="${newChannelId}"]`);
-            if (newChannelElement) newChannelElement.classList.add('active-channel');
+            if (newChannelElement) {
+                newChannelElement.classList.add('active-channel');
+                newChannelElement.classList.remove('new-message-highlight'); // Vurguyu kaldır
+            }
 
             socket.emit('request past messages', newChannelId);
 
@@ -722,18 +817,57 @@
             });
             // Belgenin herhangi bir yerine tıklayınca bağlam menüsünü gizle
             document.addEventListener('click', () => { userContextMenu.style.display = 'none'; });
+        });
+        // Güncelleme hazır olayını dinle
+        ipcRenderer.on('update-ready', () => {
+            document.getElementById('update-notification').style.display = 'block';
+        });
+        document.getElementById('restart-update-btn').addEventListener('click', () => ipcRenderer.send('restart-and-update'));
+        // Başlık çubuğu butonları
+        document.getElementById('minimize-btn').addEventListener('click', () => ipcRenderer.send('minimize-app'));
+        document.getElementById('maximize-btn').addEventListener('click', () => ipcRenderer.send('maximize-app'));
+        document.getElementById('close-btn').addEventListener('click', () => ipcRenderer.send('close-app'));
 
-            // Tarayıcı bildirim izni iste
-            if (Notification.permission === "default") {
-                Notification.requestPermission();
-            }
-
+        document.addEventListener('DOMContentLoaded', () => {
             // Kullanıcı listelerine tıklama olayını delege et
             document.getElementById('users-online').addEventListener('click', (e) => {
                 const targetUserItem = e.target.closest('.user-list-item');
                 if (targetUserItem) openDmChannel(targetUserItem.dataset.uid, targetUserItem.dataset.nickname);
             });
 
+            // Ayarlar sekmeleri
+            document.querySelectorAll('.tab-btn').forEach(button => {
+                button.addEventListener('click', () => {
+                    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+                    button.classList.add('active');
+                    document.getElementById(`tab-${button.dataset.tab}`).classList.add('active');
+                });
+            });
+
+            // Uygulama ayarlarını yükle ve uygula
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            document.body.classList.toggle('light-theme', savedTheme === 'light');
+            document.getElementById('setting-theme').value = savedTheme;
+
+            const savedNotifications = localStorage.getItem('notificationsEnabled') !== 'false'; // Varsayılan true
+            document.getElementById('setting-notifications').checked = savedNotifications;
+
+            // Ayar değişikliklerini dinle
+            document.getElementById('setting-theme').addEventListener('change', (e) => {
+                const newTheme = e.target.value;
+                localStorage.setItem('theme', newTheme);
+                document.body.classList.toggle('light-theme', newTheme === 'light');
+            });
+
+            document.getElementById('setting-notifications').addEventListener('change', (e) => {
+                localStorage.setItem('notificationsEnabled', e.target.checked);
+            });
+
+            // Tarayıcı bildirim izni iste
+            if (Notification.permission === "default") {
+                Notification.requestPermission();
+            }
         });
 
         function saveProfileChanges() {
@@ -755,32 +889,16 @@
                 return;
             }
 
-            const uids = [myUid, targetUid].sort();
-            const dmChannelId = `dm_${uids[0]}_${uids[1]}`;
-
-            // Eğer DM kanalı soldaki listede yoksa oluştur
-            if (!document.querySelector(`.channel-item[data-id="${dmChannelId}"]`)) {
-                const dmItem = document.createElement('div');
-                dmItem.className = 'channel-item';
-                dmItem.dataset.id = dmChannelId;
-                dmItem.dataset.type = 'chat';
-                dmItem.dataset.nickname = targetNickname;
-                dmItem.textContent = `@ ${targetNickname}`;
-                dmItem.onclick = () => switchChatChannel(dmChannelId);
-                dmChannelsList.appendChild(dmItem);
-            }
-
+            const dmChannelId = ensureDmChannelExists(targetUid, targetNickname);
             switchChatChannel(dmChannelId);
-            return dmChannelId;
         }
-        
+
         function ensureDmChannelExists(targetUid, targetNickname) {
             const uids = [myUid, targetUid].sort();
             const dmChannelId = `dm_${uids[0]}_${uids[1]}`;
 
             // Eğer DM kanalı soldaki listede yoksa oluştur
             if (!document.querySelector(`.channel-item[data-id="${dmChannelId}"]`)) {
-                console.log(`DM kanalı oluşturuluyor: ${dmChannelId} for ${targetNickname}`);
                 const dmItem = document.createElement('div');
                 dmItem.className = 'channel-item';
                 dmItem.dataset.id = dmChannelId;
@@ -790,23 +908,28 @@
                 dmItem.onclick = (e) => { e.stopPropagation(); switchChatChannel(dmChannelId); };
                 dmChannelsList.appendChild(dmItem);
             }
-            // DM kanalı zaten varsa bir şey yapmaya gerek yok, sadece varlığını garanti ediyoruz.
             return dmChannelId;
         }
-
+        
         function toggleMute() { 
             if (!localStream) return;
             isMuted = !isMuted;
             localStream.getAudioTracks().forEach(track => { track.enabled = !isMuted; });
-            muteBtn.classList.toggle('active-status', isMuted);
+            muteBtn.classList.toggle('active-status', isMuted); // CSS sınıfını yönet
+            muteBtn.querySelector('span').textContent = isMuted ? '🔇' : '🎤'; // Emoji değiştir
             if (isMuted && isSpeaking) { socket.emit('toggle speaking', false); } else if (!isMuted && isSpeaking) { socket.emit('toggle speaking', true); }
             socket.emit('toggle status', { status: 'mute', value: isMuted });
         }
         function toggleDeafen() { 
             isDeafened = !isDeafened;
             if (isDeafened && !isMuted) { toggleMute(); } // Sağırlaştırınca otomatik sustur
-            document.querySelectorAll('audio').forEach(audioElement => { audioElement.muted = isDeafened; });
-            deafenBtn.classList.toggle('active-status', isDeafened);
+            document.querySelectorAll('audio').forEach(audioElement => { 
+                if (audioElement.id !== `audio-${socket.id}`) { // Kendi sesimizi sağırlaştırmayız
+                    audioElement.muted = isDeafened; 
+                }
+            });
+            deafenBtn.classList.toggle('active-status', isDeafened); // CSS sınıfını yönet
+            deafenBtn.querySelector('span').textContent = isDeafened ? '🔕' : '🎧'; // Emoji değiştir
             socket.emit('toggle status', { status: 'deafen', value: isDeafened });
         }
 
@@ -836,7 +959,9 @@
             
             isMuted = false; isDeafened = false;
             muteBtn.classList.remove('active-status');
+            muteBtn.querySelector('span').textContent = '🎤';
             deafenBtn.classList.remove('active-status'); // Deafen butonu durumunu da sıfırla
+            deafenBtn.querySelector('span').textContent = '🎧';
         }
 
         function startVolumeDetection() {
