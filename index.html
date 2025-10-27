@@ -47,31 +47,57 @@
             100% { background-position: 0% 50%; }
         }
 
-        #login-screen { display: none; flex-direction: column; justify-content: center; align-items: center; width: 100%; height: 100%; position: fixed; top: 0; left: 0; z-index: 100; }
+        #login-screen { display: none; flex-direction: row; align-items: stretch; width: 100%; height: 100%; position: fixed; top: 0; left: 0; z-index: 100; overflow: hidden; }
+        .login-panel { width: 50%; height: 100%; display: flex; justify-content: center; align-items: center; }
+        
+        .info-panel {
+            background-color: rgba(0,0,0,0.2);
+            flex-direction: column;
+            gap: 15px;
+            animation: slideInFromLeft 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+        }
+        .info-panel .app-icon-large { width: 120px; height: 120px; }
+        .info-panel h1 { font-size: 3em; color: white; font-weight: bold; margin: 0; }
+        .info-panel p { font-size: 1.1em; color: var(--color-text); max-width: 80%; text-align: center; }
+
+        .form-panel {
+            background-color: var(--bg-dark);
+            animation: slideInFromRight 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+        }
+
+        @keyframes slideInFromLeft { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+        @keyframes slideInFromRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
+
         .login-box { 
-            background-color: rgba(39, 42, 50, 0.85); /* Hafif şeffaf */
+            background: none; /* Arka planı kaldır, panelde zaten var */
             padding: 40px 50px; 
             border-radius: 12px; 
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5); 
+            box-shadow: none; /* Gölgeyi kaldır */
             text-align: center; 
-            border: 1px solid var(--border-color);
-            backdrop-filter: blur(10px); /* Arka planı bulanıklaştırır (destekleyen tarayıcılarda) */
-            animation: fadeInFromBottom 0.6s ease-out forwards;
-            opacity: 0;
+            border: none; /* Kenarlığı kaldır */
+            width: 380px; /* Kutunun genişliğini ayarla */
+            animation: fadeIn 1s ease-in-out 0.5s forwards; /* Paneller geldikten sonra belirsin */
+            opacity: 0; /* Animasyon için başlangıçta gizli */
         }
-        @keyframes fadeInFromBottom {
-            from { opacity: 0; transform: translateY(30px); }
+        @keyframes fadeIn {
+            from { opacity: 0; }
             to { opacity: 1; transform: translateY(0); }
         }
         .login-box form { display: flex; flex-direction: column; }
         #login-screen h2 { margin-bottom: 25px; color: white; font-size: 1.8em; }
-        #login-screen input { padding: 14px; margin-bottom: 15px; width: 320px; border-radius: 8px; border: 1px solid var(--border-color); background-color: var(--bg-dark); color: var(--color-text); font-size: 1em; transition: border-color 0.3s, box-shadow 0.3s; }
-        #login-screen input:focus { outline: none; border-color: var(--color-link); box-shadow: 0 0 5px rgba(139, 90, 246, 0.5); }
-        #login-screen .app-icon {
-            width: 70px;
-            height: 70px;
-            margin-bottom: 20px; /* Başlık ile arasında boşluk */
+        #login-screen input { 
+            padding: 14px; 
+            margin-bottom: 15px; 
+            width: 100%; /* Genişliği tam yap */
+            box-sizing: border-box; /* Padding'i genişliğe dahil et */
+            border-radius: 8px; 
+            border: 1px solid var(--border-color); 
+            background-color: var(--bg-light); /* Rengi biraz açalım */
+            color: var(--color-text); 
+            font-size: 1em; 
+            transition: border-color 0.3s, box-shadow 0.3s; 
         }
+        #login-screen input:focus { outline: none; border-color: var(--color-link); box-shadow: 0 0 5px rgba(139, 90, 246, 0.5); }
         #nickname-input-container { max-height: 0; overflow: hidden; transition: max-height 0.4s ease-in-out; }
         #auth-main-btn { padding: 14px; margin-top: 10px; width: 100%; border-radius: 8px; border: none; background-color: var(--color-link); color: white; cursor: pointer; font-weight: bold; font-size: 1.1em; transition: background-color 0.2s, box-shadow 0.3s; box-shadow: 0 0 10px rgba(139, 90, 246, 0.5); }
         #auth-main-btn:hover { background-color: #7c4ee4; box-shadow: 0 0 15px rgba(139, 90, 246, 0.8); }
