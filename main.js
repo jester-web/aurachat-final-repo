@@ -43,15 +43,29 @@ function createWindow() {
   mainWindow.loadFile('index.html'); // Ana pencere içeriğini yüklemeye başla
 
   // --- OTOMATİK GÜNCELLEME ---
+  // Geliştirme ortamında loglamayı etkinleştir
+  autoUpdater.logger = require("electron-log");
+  autoUpdater.logger.transports.file.level = "info";
+  console.log('[Updater] Otomatik güncelleme kontrolü başlatılıyor...');
   autoUpdater.checkForUpdatesAndNotify();
 
   autoUpdater.on('update-available', () => {
+    console.log('[Updater] Yeni bir güncelleme mevcut.');
     // Bu olayı dinleyerek arayüzde "Güncelleme bulunuyor..." gibi bir mesaj gösterebilirsiniz.
   });
 
   autoUpdater.on('update-downloaded', () => {
+    console.log('[Updater] Yeni güncelleme indirildi. Arayüze haber veriliyor.');
     // Güncelleme indirildiğinde arayüze haber ver.
     mainWindow.webContents.send('update-ready');
+  });
+
+  autoUpdater.on('error', (err) => {
+    console.error('[Updater] Güncelleme sırasında hata:', err);
+  });
+
+  autoUpdater.on('checking-for-update', () => {
+    console.log('[Updater] Güncelleme kontrol ediliyor...');
   });
 
   // Pencere kontrol olaylarını dinle
