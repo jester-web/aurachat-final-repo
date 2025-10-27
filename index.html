@@ -20,11 +20,18 @@
         body { display: flex; margin: 0; height: 100vh; font-family: 'Inter', sans-serif; background-color: var(--bg-light); color: var(--color-text); }
         #login-screen { display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%; height: 100%; background-color: var(--bg-dark); position: absolute; z-index: 100; }
         .login-box { background-color: var(--bg-medium); padding: 40px 50px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4); text-align: center; border: 1px solid var(--border-color); }
+        .login-box form { display: flex; flex-direction: column; }
         #login-screen h2 { margin-bottom: 25px; color: white; font-size: 1.8em; }
-        #login-screen input, #login-screen button { padding: 14px; margin: 10px 0; width: 320px; border-radius: 8px; border: none; background-color: var(--bg-dark); color: var(--color-text); border: 1px solid var(--border-color); }
-        #login-screen button { background-color: var(--color-link); cursor: pointer; font-weight: bold; transition: background-color 0.2s, box-shadow 0.3s; box-shadow: 0 0 10px rgba(139, 90, 246, 0.5); }
-        #login-error { color: var(--color-danger); margin-top: 10px; }
-        #toggle-auth-btn { background-color: transparent; color: var(--color-link); text-decoration: underline; font-size: 0.9em; margin-top: 15px; }
+        #login-screen input { padding: 14px; margin-bottom: 15px; width: 320px; border-radius: 8px; border: 1px solid var(--border-color); background-color: var(--bg-dark); color: var(--color-text); font-size: 1em; transition: border-color 0.3s, box-shadow 0.3s; }
+        #login-screen input:focus { outline: none; border-color: var(--color-link); box-shadow: 0 0 5px rgba(139, 90, 246, 0.5); }
+        #nickname-input-container { max-height: 0; overflow: hidden; transition: max-height 0.4s ease-in-out; }
+        #auth-main-btn { padding: 14px; margin-top: 10px; width: 100%; border-radius: 8px; border: none; background-color: var(--color-link); color: white; cursor: pointer; font-weight: bold; font-size: 1.1em; transition: background-color 0.2s, box-shadow 0.3s; box-shadow: 0 0 10px rgba(139, 90, 246, 0.5); }
+        #auth-main-btn:hover { background-color: #7c4ee4; box-shadow: 0 0 15px rgba(139, 90, 246, 0.8); }
+        #auth-main-btn:disabled { background-color: #5a5e6b; cursor: not-allowed; box-shadow: none; }
+        #login-error { color: var(--color-danger); margin-top: 15px; min-height: 20px; font-weight: 500; }
+        #toggle-auth-btn { background: none; border: none; color: var(--color-link); text-decoration: underline; font-size: 0.9em; margin-top: 20px; cursor: pointer; }
+        #toggle-auth-btn:hover { color: #a482f7; }
+
 
         /* UYGULAMA EKRANI */
         #app-screen { display: none; width: 100%; height: 100%; flex-direction: row; }
@@ -66,15 +73,17 @@
     <div id="login-screen">
         <div class="login-box">
             <h2 id="auth-title">Giriş Yap</h2>
-            
-    
-     <input type="text" id="server-url-input" placeholder="Sunucu Adresi" value="https://aurachat-oyir.onrender.com" style="display:none;">       <input type="email" id="email-input" placeholder="E-posta">
-            <input type="password" id="password-input" placeholder="Şifre">
-            
-            <button id="auth-main-btn" onclick="authenticate()">Giriş Yap</button>
+            <form id="auth-form" onsubmit="authenticate(event)">
+                <input type="text" id="server-url-input" placeholder="Sunucu Adresi" value="https://aurachat-final-repo.onrender.com" style="display:none;">
+                <div id="nickname-input-container">
+                    <input type="text" id="nickname-input" placeholder="Kullanıcı Adı">
+                </div>
+                <input type="email" id="email-input" placeholder="E-posta" required>
+                <input type="password" id="password-input" placeholder="Şifre" required>
+                <button type="submit" id="auth-main-btn">Giriş Yap</button>
+            </form>
             <p id="login-error"></p>
-
-            <button id="toggle-auth-btn" onclick="toggleAuthMode()">Hesabın yok mu? Kayıt Ol</button>
+            <button id="toggle-auth-btn" onclick="toggleAuthMode(event)">Hesabın yok mu? Kayıt Ol</button>
         </div>
     </div>
 
@@ -134,8 +143,9 @@
         </div>
     </div>
 
+    <!-- socket.io istemci kütüphanesini CDN'den yüklüyoruz -->
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <script>
-        const io = require('socket.io-client');
         let socket;
 
         const loginScreen = document.getElementById('login-screen');
@@ -153,6 +163,7 @@
         const authMainBtn = document.getElementById('auth-main-btn');
         const toggleAuthBtn = document.getElementById('toggle-auth-btn');
         const nicknameInput = document.getElementById('nickname-input');
+        const nicknameContainer = document.getElementById('nickname-input-container');
         const emailInput = document.getElementById('email-input');
         const passwordInput = document.getElementById('password-input');
 
@@ -181,39 +192,52 @@
         const SPEAK_THRESHOLD = 50; 
         
         // --- AUTH MANTIĞI ---
-        function toggleAuthMode() {
+        function toggleAuthMode(event) {
+            if (event) event.preventDefault();
             authMode = authMode === 'login' ? 'register' : 'login';
+            errorDisplay.textContent = '';
             
             if (authMode === 'register') {
                 authTitle.textContent = 'Hesap Oluştur';
                 authMainBtn.textContent = 'Kayıt Ol';
                 toggleAuthBtn.textContent = 'Zaten hesabın var mı? Giriş Yap';
-                nicknameInput.style.display = 'block';
+                nicknameContainer.style.maxHeight = '100px'; // Animasyon için
+                nicknameInput.required = true;
             } else {
                 authTitle.textContent = 'Giriş Yap';
                 authMainBtn.textContent = 'Giriş Yap';
                 toggleAuthBtn.textContent = 'Hesabın yok mu? Kayıt Ol';
-                nicknameInput.style.display = 'none';
+                nicknameContainer.style.maxHeight = '0';
+                nicknameInput.required = false;
             }
-            errorDisplay.textContent = '';
         }
 
-        function authenticate() {
+        function authenticate(event) {
+            if (event) event.preventDefault();
+
             const serverUrl = document.getElementById('server-url-input').value.trim();
             const email = emailInput.value.trim();
             const password = passwordInput.value;
             const nickname = nicknameInput.value.trim();
 
-            if (!email || !password || (authMode === 'register' && !nickname)) {
-                errorDisplay.textContent = 'Tüm alanları doldurmalısın.';
+            if (!email || !password) {
+                errorDisplay.textContent = 'E-posta ve şifre alanları zorunludur.';
+                return;
+            }
+            if (authMode === 'register' && !nickname) {
+                errorDisplay.textContent = 'Kayıt olmak için kullanıcı adı girmelisiniz.';
                 return;
             }
             
             errorDisplay.textContent = 'Bağlanıyor...';
+            authMainBtn.disabled = true;
+            authMainBtn.textContent = 'Lütfen Bekleyin...';
+
             if (socket && socket.connected) { socket.disconnect(); }
             socket = io(serverUrl);
 
             socket.on('connect', () => {
+                console.log('Sunucuya başarıyla bağlandı!');
                 const authData = { email, password };
                 if (authMode === 'register') { authData.nickname = nickname; }
 
@@ -226,13 +250,21 @@
 
             socket.on('auth error', (message) => {
                 errorDisplay.textContent = `Hata: ${message}`;
+                authMainBtn.disabled = false;
+                authMainBtn.textContent = authMode === 'login' ? 'Giriş Yap' : 'Kayıt Ol';
                 if (socket) socket.disconnect();
             });
 
             socket.on('auth success', (data) => {
                 if (data.type === 'register') {
-                    errorDisplay.textContent = 'Kayıt başarılı! Şimdi giriş yapabilirsin.';
+                    // Kayıt başarılı olduğunda otomatik olarak giriş moduna geç
+                    emailInput.value = '';
+                    passwordInput.value = '';
+                    nicknameInput.value = '';
                     toggleAuthMode();
+                    // Kullanıcıya bilgi ver
+                    errorDisplay.textContent = 'Kayıt başarılı! Lütfen giriş yapın.';
+                    authMainBtn.disabled = false; // Butonu tekrar aktif et
                 }
             });
 
@@ -250,6 +282,8 @@
 
             socket.on('connect_error', (error) => {
                 errorDisplay.textContent = `Bağlantı Hatası: Sunucuya erişilemiyor.`;
+                authMainBtn.disabled = false;
+                authMainBtn.textContent = authMode === 'login' ? 'Giriş Yap' : 'Kayıt Ol';
                 if (socket) socket.disconnect();
             });
             
