@@ -23,7 +23,7 @@ const avatarsDir = path.join(uploadsDir, 'avatars');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
 if (!fs.existsSync(avatarsDir)) fs.mkdirSync(avatarsDir);
 
-app.use('/uploads', express.static(uploadsDir));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 const avatarStorage = multer.diskStorage({
     destination: function (req, file, cb) { cb(null, avatarsDir) },
@@ -34,6 +34,17 @@ const avatarStorage = multer.diskStorage({
 });
 const uploadAvatar = multer({ storage: avatarStorage });
 
+// Yeni Avatar Yükleme Endpoint'i
+app.post('/upload-avatar', uploadAvatar.single('avatar'), (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ error: 'Dosya yüklenmedi.' });
+    }
+    // Render'da public URL'yi doğru oluşturmak için
+    const host = req.get('host');
+    const protocol = req.protocol;
+    const avatarUrl = `${protocol}://${host}/uploads/avatars/${req.file.filename}`;
+    res.json({ avatarUrl: avatarUrl });
+});
 
 // --- FIREBASE BAĞLANTISI (RENDER AYARI) ---
 let db, auth;
