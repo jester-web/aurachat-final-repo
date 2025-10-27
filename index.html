@@ -141,6 +141,11 @@
         .context-menu-item { padding: 8px 15px; color: #b9bbbe; cursor: pointer; transition: background-color 0.15s; }
         .context-menu-item:hover { background-color: var(--color-link); color: white; }
 
+        /* Kanal başlıklarındaki ekleme butonu */
+        .add-channel-btn {
+            background: none; border: none; color: #8a929b; font-size: 1.2em; cursor: pointer; transition: color 0.2s; padding: 0 5px;
+        }
+        .add-channel-btn:hover { color: white; }
 
 
         /* PROFIL */
@@ -245,11 +250,12 @@
                 AuraChat
             </div>
             <div class="channels-list">
-                <h4>METİN KANALLARI</h4>
-                <div class="channel-item active-channel" data-type="chat" data-id="ana-sohbet-kanali"># genel-sohbet</div>
-
-                <h4>SES KANALLARI</h4>
-                <div class="voice-channel-group">
+                <h4><span>METİN KANALLARI</span> <button class="add-channel-btn" data-type="text">+</button></h4>
+                <div id="text-channels-list">
+                    <div class="channel-item active-channel" data-type="chat" data-id="ana-sohbet-kanali"># genel-sohbet</div>
+                </div>
+                <h4><span>SES KANALLARI</span> <button class="add-channel-btn" data-type="voice">+</button></h4>
+                <div id="voice-channels-list" class="voice-channel-group">
                     <div class="channel-item" data-type="voice" data-id="ana-ses-odasi">🔊 Ana Ses Odası</div>
                     <div class="voice-user-list" data-channel-id="ana-ses-odasi"></div>
                 </div>
@@ -319,6 +325,9 @@
     </div>
     <div id="user-context-menu" class="context-menu">
     </div>
+    <div id="channel-context-menu" class="context-menu">
+        <div class="context-menu-item" id="delete-channel-btn">Kanalı Sil</div>
+    </div>
     <!-- socket.io istemci kütüphanesini CDN'den yüklüyoruz -->
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <!-- Markdown desteği için markdown-it kütüphanesini ekliyoruz -->
@@ -333,6 +342,8 @@
         const messages = document.getElementById('messages');
         const messageInput = document.getElementById('message-input');
         const userList = document.getElementById('user-list');
+        const textChannelsList = document.getElementById('text-channels-list');
+        const voiceChannelsList = document.getElementById('voice-channels-list');
         const dmChannelsList = document.getElementById('dm-channels-list');
         const userListOffline = document.getElementById('user-list-offline');
         const muteBtn = document.getElementById('mute-btn'); 
@@ -361,6 +372,7 @@
         const messageForm = document.getElementById('message-form');
         const typingIndicator = document.getElementById('typing-indicator');
         const userContextMenu = document.getElementById('user-context-menu');
+        const channelContextMenu = document.getElementById('channel-context-menu');
 
         const voiceControlsBar = document.getElementById('voice-controls-bar');
         const voiceChannelNameSpan = document.getElementById('voice-channel-name');
@@ -610,6 +622,30 @@
                 } 
             });
 
+            socket.on('channel-list', (channels) => {
+                channels.forEach(channel => addChannelToDOM(channel));
+            });
+
+            socket.on('channel-created', (channel) => {
+                addChannelToDOM(channel);
+            });
+
+            socket.on('channel-deleted', (channelId) => {
+                const channelElement = document.querySelector(`.channel-item[data-id="${channelId}"]`);
+                if (channelElement) {
+                    // Eğer silinen kanal aktif kanalsa, ana kanala geç
+                    if (currentChatChannel === channelId) {
+                        switchChatChannel('ana-sohbet-kanali');
+                    }
+                    // Eğer silinen kanal ses kanalıysa ve içindeysek, kanaldan ayrıl
+                    if (currentVoiceChannel === channelId) {
+                        leaveCurrentVoiceChannel();
+                    }
+                    const parentGroup = channelElement.closest('.voice-channel-group') || channelElement.parentElement;
+                    parentGroup.remove();
+                }
+            });
+
             socket.on('dm history', async (dmChannels) => {
                 const allUsers = [...userList.children, ...userListOffline.children];
                 dmChannels.forEach(dm => {
@@ -778,23 +814,62 @@
             // Belgenin herhangi bir yerine tıklayınca bağlam menüsünü gizle
             document.addEventListener('click', () => { userContextMenu.style.display = 'none'; });
         });
+        document.addEventListener('click', () => { channelContextMenu.style.display = 'none'; });
+
+        // Kanal ekleme butonları
+        document.querySelectorAll('.add-channel-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const type = e.target.dataset.type;
+                const name = prompt(`Yeni ${type === 'text' ? 'metin' : 'ses'} kanalı adı:`);
+                if (name && name.trim()) {
+                    socket.emit('create-channel', { name: name.trim(), type });
+                }
+            });
+        });
+
+
+
         // Başlık çubuğu butonları
         document.getElementById('minimize-btn').addEventListener('click', () => ipcRenderer.send('minimize-app'));
         document.getElementById('maximize-btn').addEventListener('click', () => ipcRenderer.send('maximize-app'));
         document.getElementById('close-btn').addEventListener('click', () => ipcRenderer.send('close-app'));
 
 
-        function saveProfileChanges() {
+        async function saveProfileChanges() {
             const newNickname = settingNicknameInput.value.trim();
-            const newAvatar = settingAvatarInput.value.trim();
+            let newAvatarUrl = settingAvatarInput.value.trim();
+            const avatarFile = settingAvatarFileInput.files[0];
 
             if (!newNickname) {
                 profileErrorDisplay.textContent = 'Kullanıcı adı boş bırakılamaz.';
                 return;
             }
-            
+
             profileErrorDisplay.textContent = 'Kaydediliyor...';
-            socket.emit('update profile', { newNickname, newAvatarUrl: newAvatar });
+
+            // Eğer kullanıcı bir dosya seçtiyse, önce onu yükle
+            if (avatarFile) {
+                try {
+                    const formData = new FormData();
+                    formData.append('avatar', avatarFile);
+
+                    const response = await fetch('/upload-avatar', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const result = await response.json();
+                    if (!response.ok) throw new Error(result.error || 'Dosya yüklenemedi.');
+
+                    newAvatarUrl = result.avatarUrl; // Sunucudan gelen yeni URL'yi kullan
+                } catch (error) {
+                    profileErrorDisplay.textContent = `Hata: ${error.message}`;
+                    return;
+                }
+            }
+
+            socket.emit('update profile', { newNickname, newAvatarUrl: newAvatarUrl });
         }
 
         function openDmChannel(targetUid, targetNickname) {
@@ -825,6 +900,51 @@
             return dmChannelId;
         }
         
+        function addChannelToDOM(channel) {
+            const channelItem = document.createElement('div');
+            channelItem.className = 'channel-item';
+            channelItem.dataset.id = channel.id;
+            
+            channelItem.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                channelContextMenu.style.display = 'block';
+                channelContextMenu.style.left = `${e.pageX}px`;
+                channelContextMenu.style.top = `${e.pageY}px`;
+                
+                document.getElementById('delete-channel-btn').onclick = () => {
+                    if (confirm(`'${channel.name}' kanalını silmek istediğinizden emin misiniz?`)) {
+                        socket.emit('delete-channel', channel.id);
+                    }
+                    channelContextMenu.style.display = 'none';
+                };
+            });
+
+            if (channel.type === 'text') {
+                channelItem.dataset.type = 'chat';
+                channelItem.innerHTML = `# ${channel.name}`;
+                // 💡 DÜZELTME: Yeni oluşturulan metin kanalına tıklama olayı eklendi.
+                channelItem.onclick = () => switchChatChannel(channel.id);
+                textChannelsList.appendChild(channelItem);
+            } else if (channel.type === 'voice') {
+                const group = document.createElement('div');
+                group.className = 'voice-channel-group';
+                channelItem.dataset.type = 'voice';
+                channelItem.innerHTML = `🔊 ${channel.name}`;
+                // 💡 DÜZELTME: Yeni oluşturulan ses kanalına tıklama olayı eklendi.
+                channelItem.onclick = () => joinChannel(channel.id, 'voice');
+
+                // 💡 DÜZELTME: Ses kanalına katılan kullanıcıların listeleneceği div eklendi.
+                const userListDiv = document.createElement('div');
+                userListDiv.className = 'voice-user-list';
+                userListDiv.dataset.channelId = channel.id;
+
+                group.appendChild(channelItem);
+                group.appendChild(userListDiv);
+                voiceChannelsList.appendChild(group);
+            }
+        }
+
         function toggleMute() { 
             if (!localStream) return;
             isMuted = !isMuted;
@@ -878,6 +998,27 @@
             deafenBtn.querySelector('span').textContent = '🎧';
         }
 
+        // WebRTC bağlantısı için STUN ve TURN sunucu yapılandırması
+        const iceConfiguration = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' },
+                { urls: 'stun:stun2.l.google.com:19302' },
+                // OpenRelay'den ücretsiz bir TURN sunucusu.
+                // Not: Bu sunucular halka açıktır ve üretim ortamları için kendi TURN sunucunuzu kurmanız önerilir.
+                {
+                    urls: 'turn:openrelay.metered.ca:80',
+                    username: 'openrelayproject',
+                    credential: 'openrelayproject'
+                },
+                {
+                    urls: 'turn:openrelay.metered.ca:443',
+                    username: 'openrelayproject',
+                    credential: 'openrelayproject'
+                }
+            ]
+        };
+
         function startVolumeDetection() {
             if (!localStream) return;
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -927,7 +1068,7 @@
         }
         
         function createPeerConnection(userId, isOfferer) {
-            const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+            const pc = new RTCPeerConnection(iceConfiguration);
             console.log(`[WebRTC] Yeni RTCPeerConnection oluşturuldu for ${userId}. IsOfferer: ${isOfferer}`);
             peerConnections[userId] = pc;
             localStream.getTracks().forEach(track => { pc.addTrack(track, localStream); console.log(`[WebRTC] Yerel akış eklendi to ${userId}'s PeerConnection:`, track); }); // Yerel akışı peer bağlantısına ekle
