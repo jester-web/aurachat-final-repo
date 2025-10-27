@@ -67,15 +67,25 @@ const userStatus = {};
 const AVATAR_URLS = [ 'https://i.pravatar.cc/150?img=1', 'https://i.pravatar.cc/150?img=2', 'https://i.pravatar.cc/150?img=3', 'https://i.pravatar.cc/150?img=4', 'https://i.pravatar.cc/150?img=5' ];
 
 
-function getOnlineUsers() {
-    return Object.values(onlineUsers)
-        .map(u => ({ 
-            nickname: u.nickname, 
-            socketId: u.socketId,
-            avatarUrl: u.avatarUrl,
-            status: userStatus[u.socketId] || {},
-            uid: u.uid
-        }));
+async function getAllUsers() {
+    const allUsersSnapshot = await db.collection('users').get();
+    const allUsers = [];
+
+    allUsersSnapshot.forEach(doc => {
+        const userData = doc.data();
+        const isOnline = Object.values(onlineUsers).some(onlineUser => onlineUser.uid === userData.uid);
+        const socketId = isOnline ? Object.keys(onlineUsers).find(sid => onlineUsers[sid].uid === userData.uid) : null;
+
+        allUsers.push({
+            uid: userData.uid,
+            nickname: userData.nickname,
+            avatarUrl: userData.avatarUrl,
+            isOnline: isOnline,
+            status: isOnline ? (userStatus[socketId] || {}) : {}
+        });
+    });
+
+    return allUsers.sort((a, b) => b.isOnline - a.isOnline || a.nickname.localeCompare(b.nickname));
 }
 
 io.on('connection', (socket) => {
@@ -125,13 +135,17 @@ io.on('connection', (socket) => {
           userStatus[socket.id] = { muted: false, deafened: false, speaking: false, channel: null };
           
           socket.join(TEAM_ID); 
-          
+
           socket.emit('login success', { nickname: userData.nickname, avatarUrl: userData.avatarUrl });
           
           console.log(`[SUNUCU] Giriş başarılı: ${userData.nickname}`);
-          io.to(TEAM_ID).emit('user list', getOnlineUsers());
+          // Kullanıcı giriş yaptığında eski mesajları gönder
+          sendPastMessages(socket, MAIN_CHANNEL); 
+          sendDmHistory(socket, uid);
+          getAllUsers().then(users => io.to(TEAM_ID).emit('user list', users));
 
       } catch (err) {
+          // Firebase kimlik doğrulama hatası (örneğin, yanlış şifre)
           console.error('Giriş hatası:', err.code, err.message);
           socket.emit('auth error', 'E-posta veya şifre hatalı.');
       }
@@ -158,7 +172,8 @@ io.on('connection', (socket) => {
         await auth.updateUser(user.uid, { displayName: newNickname, photoURL: newAvatarUrl });
         
         socket.emit('profile update success', { nickname: user.nickname, avatarUrl: user.avatarUrl });
-        io.to(TEAM_ID).emit('user list', getOnlineUsers());
+        // Profil güncellendiğinde tüm kullanıcılara listeyi tekrar gönder
+        getAllUsers().then(users => io.to(TEAM_ID).emit('user list', users));
 
     } catch(err) {
         console.error('Profil güncelleme hatası:', err.message);
@@ -172,11 +187,30 @@ io.on('connection', (socket) => {
   // ------------------------------------
   
   socket.on('chat message', (data) => {
-    const user = onlineUsers[socket.id];
-    if (!user) return;
-    // Markdown ile mesajı sanitize et ve HTML'e çevir
-    const sanitizedMessage = md.renderInline(data.message);
-    io.to(TEAM_ID).emit('chat message', { nickname: user.nickname, avatarUrl: user.avatarUrl, message: sanitizedMessage, channel: data.channelId, timestamp: new Date() });
+      const user = onlineUsers[socket.id];
+      if (!user) return;
+
+      const sanitizedMessage = md.renderInline(data.message);
+      const messageData = { nickname: user.nickname, avatarUrl: user.avatarUrl, message: sanitizedMessage, channel: data.channelId, timestamp: admin.firestore.FieldValue.serverTimestamp(), senderUid: user.uid };
+      db.collection('messages').add(messageData);
+
+      const finalMessage = { ...messageData, timestamp: new Date() };
+
+      if (data.channelId.startsWith('dm_')) {
+          // Bu bir özel mesaj (DM)
+          const uids = data.channelId.replace('dm_', '').split('_');
+          const recipientUid = uids.find(uid => uid !== user.uid);
+
+          const recipientSocketId = Object.keys(onlineUsers).find(sid => onlineUsers[sid].uid === recipientUid);
+
+          socket.emit('chat message', finalMessage); // Mesajı gönderene geri gönder
+          if (recipientSocketId) {
+              io.to(recipientSocketId).emit('chat message', finalMessage); // Mesajı alıcıya gönder
+          }
+      } else {
+          // Bu bir genel kanal mesajı
+          io.to(TEAM_ID).emit('chat message', finalMessage);
+      }
   });
 
   socket.on('join voice channel', (channelId) => {
@@ -186,12 +220,13 @@ io.on('connection', (socket) => {
     userStatus[socket.id].channel = channelId;
     socket.join(channelId);
     socket.to(channelId).emit('user joined', socket.id);
+    console.log(`[SUNUCU] ${user.nickname} (${socket.id}) ses kanalına katıldı: ${channelId}`);
 
     // Kanaldaki diğer kullanıcıları yeni katılan kullanıcıya gönder
     const usersInChannel = Object.values(onlineUsers).filter(u => userStatus[u.socketId] && userStatus[u.socketId].channel === channelId && u.socketId !== socket.id);
     socket.emit('ready to talk', usersInChannel.map(u => u.socketId));
 
-    io.to(TEAM_ID).emit('user list', getOnlineUsers()); // Kullanıcı listesini güncelle
+    getAllUsers().then(users => io.to(TEAM_ID).emit('user list', users)); // Kullanıcı listesini güncelle
   });
 
   socket.on('leave voice channel', (channelId) => {
@@ -201,40 +236,49 @@ io.on('connection', (socket) => {
     userStatus[socket.id].channel = null;
     userStatus[socket.id].speaking = false; // Kanaldan ayrılınca konuşma durumunu sıfırla
     socket.leave(channelId);
+    console.log(`[SUNUCU] ${user.nickname} (${socket.id}) ses kanalından ayrıldı: ${channelId}`);
     socket.to(channelId).emit('user left', socket.id);
 
-    io.to(TEAM_ID).emit('user list', getOnlineUsers()); // Kullanıcı listesini güncelle
+    getAllUsers().then(users => io.to(TEAM_ID).emit('user list', users)); // Kullanıcı listesini güncelle
   });
 
   socket.on('toggle status', (data) => {
     const user = onlineUsers[socket.id];
     if (!user) return;
+    console.log(`[SUNUCU] ${user.nickname} (${socket.id}) durumu değişti: ${data.status} = ${data.value}`);
     userStatus[socket.id][data.status] = data.value;
-    io.to(TEAM_ID).emit('user list', getOnlineUsers()); // Kullanıcı listesini güncelle
+    getAllUsers().then(users => io.to(TEAM_ID).emit('user list', users)); // Kullanıcı listesini güncelle
   });
 
   socket.on('toggle speaking', (isSpeaking) => { 
     const user = onlineUsers[socket.id];
     if (!user) return;
+    console.log(`[SUNUCU] ${user.nickname} (${socket.id}) konuşma durumu: ${isSpeaking}`);
     userStatus[socket.id].speaking = isSpeaking; 
-    io.to(TEAM_ID).emit('user list', getOnlineUsers());
+    getAllUsers().then(users => io.to(TEAM_ID).emit('user list', users));
   });
   
   socket.on('typing', (isTyping) => {
     const user = onlineUsers[socket.id];
     if (!user) return;
+    // console.log(`[SUNUCU] ${user.nickname} (${socket.id}) yazıyor: ${isTyping}`);
     // Sadece mevcut sohbet kanalındaki diğer kullanıcılara gönder
     socket.to(TEAM_ID).emit('typing', { nickname: user.nickname, isTyping });
   });
 
   // WebRTC Sinyalleşmesi
-  socket.on('offer', (id, message) => { socket.to(id).emit('offer', socket.id, message); });
-  socket.on('answer', (id, message) => { socket.to(id).emit('answer', socket.id, message); });
-  socket.on('candidate', (id, message) => { socket.to(id).emit('candidate', socket.id, message); });
+  socket.on('offer', (id, message) => { console.log(`[SUNUCU] Offer gönderiliyor to ${id} from ${socket.id}`); socket.to(id).emit('offer', socket.id, message); });
+  socket.on('answer', (id, message) => { console.log(`[SUNUCU] Answer gönderiliyor to ${id} from ${socket.id}`); socket.to(id).emit('answer', socket.id, message); });
+  socket.on('candidate', (id, message) => { console.log(`[SUNUCU] ICE Candidate gönderiliyor to ${id} from ${socket.id}`); socket.to(id).emit('candidate', socket.id, message); });
   
   socket.on('logout', () => {
+    console.log(`[SUNUCU] Kullanıcı çıkış yaptı: ${socket.id}`);
     // Logout olayında disconnect ile aynı işlemleri yap
     handleDisconnect(socket.id);
+  });
+
+  socket.on('request past messages', (channelId) => {
+      sendPastMessages(socket, channelId);
   });
 
   // Kullanıcı bağlantıyı kestiğinde
@@ -243,6 +287,7 @@ io.on('connection', (socket) => {
   });
 
   function handleDisconnect(socketId) {
+    console.log(`[SUNUCU] Kullanıcı bağlantısı kesildi: ${socketId}`);
     const user = onlineUsers[socketId];
     if (!user) return;
     
@@ -254,7 +299,7 @@ io.on('connection', (socket) => {
     delete onlineUsers[socketId]; 
     delete userStatus[socketId]; 
     
-    io.to(TEAM_ID).emit('user list', getOnlineUsers());
+    getAllUsers().then(users => io.to(TEAM_ID).emit('user list', users));
   }
 });
 
@@ -263,3 +308,54 @@ const RENDER_PORT = process.env.PORT || PORT;
 server.listen(RENDER_PORT, () => {
   console.log(`[SUNUCU BAŞARILI] AuraChat port ${RENDER_PORT}'da çalışıyor.`);
 });
+
+// Geçmiş mesajları belirli bir kanaldan çekip gönderen fonksiyon
+async function sendPastMessages(socket, channelId) {
+    try {
+        const messagesRef = db.collection('messages')
+                                .where('channel', '==', channelId)
+                                .orderBy('timestamp', 'desc')
+                                .limit(50); // Son 50 mesajı çek
+        const snapshot = await messagesRef.get();
+        const pastMessages = [];
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            pastMessages.unshift({ ...data, timestamp: data.timestamp.toDate() }); // En eski mesaj en üstte olacak şekilde sırala
+        });
+        socket.emit('past messages', { channelId, messages: pastMessages });
+    } catch (error) {
+        console.error('Geçmiş mesajları çekerken hata:', error);
+    }
+}
+
+// Kullanıcının dahil olduğu tüm DM kanallarını ve son mesajları getiren fonksiyon
+async function sendDmHistory(socket, userId) {
+    try {
+        const messagesRef = db.collection('messages');
+        // Kullanıcının gönderen veya alıcı olduğu DM'leri bul
+        const sentDmsQuery = messagesRef.where('senderUid', '==', userId).where('channel', '>=', 'dm_').where('channel', '<', 'dm`').get();
+        const receivedDmsQuery = messagesRef.where('channel', '>=', 'dm_').where('channel', '<', 'dm`').get(); // Bu daha karmaşık, şimdilik basitleştirelim
+
+        const allDmsSnapshot = await messagesRef.where('channel', '>=', 'dm_').where('channel', '<', 'dm`').orderBy('timestamp', 'desc').get();
+
+        const dmChannels = {};
+
+        allDmsSnapshot.forEach(doc => {
+            const data = doc.data();
+            const uids = data.channel.replace('dm_', '').split('_');
+            if (uids.includes(userId)) {
+                if (!dmChannels[data.channel]) {
+                    const otherUserUid = uids.find(uid => uid !== userId);
+                    dmChannels[data.channel] = {
+                        channelId: data.channel,
+                        otherUserUid: otherUserUid,
+                        // Diğer kullanıcının bilgilerini de eklemek daha iyi olur, şimdilik UID yeterli
+                    };
+                }
+            }
+        });
+        socket.emit('dm history', Object.values(dmChannels));
+    } catch (error) {
+        console.error('DM geçmişi çekerken hata:', error);
+    }
+}
