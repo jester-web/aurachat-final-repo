@@ -90,7 +90,8 @@
         #users-online h4 { padding: 0 20px; margin-top: 5px; margin-bottom: 10px; color: #8a929b; font-size: 0.8em; font-weight: 600; text-transform: uppercase; }
         .user-list-item { display: flex; align-items: center; padding: 6px 20px; }
         .user-list-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; margin-right: 12px; }
-        .user-list-name { color: #b9bbbe; font-weight: 500; }
+        .user-list-name { color: #b9bbbe; font-weight: 500; transition: color 0.2s; }
+        .user-list-item.offline .user-list-name { color: #72767d; }
         .user-status-dot { width: 8px; height: 8px; border-radius: 50%; background-color: var(--color-online); margin-left: auto; }
 
         /* User Context Menu */
@@ -113,6 +114,9 @@
         /* PROFIL */
         #profile-bar {
             width: 240px; background-color: #202225; padding: 8px; 
+            width: 100%; /* Takes full width of parent #channels-panel */
+            background-color: #202225; padding: 8px;
+            box-sizing: border-box; /* Padding'i genişliğe dahil et */
             display: flex; align-items: center; justify-content: space-between;
         }
         .profile-info { display: flex; align-items: center; cursor: pointer; }
@@ -122,6 +126,12 @@
         .control-btn { background: none; border: none; color: #b9bbbe; font-size: 1.2em; padding: 5px; border-radius: 4px; cursor: pointer; transition: background-color 0.15s; }
         .control-btn:hover { background-color: #393c43; }
         .control-btn.active-status { color: var(--color-danger); }
+
+        #server-header {
+            padding: 15px; font-size: 1.1em; font-weight: bold; color: white;
+            border-bottom: 1px solid var(--border-color);
+            box-shadow: 0 1px 0 rgba(0,0,0,0.2);
+        }
     </style>
     <style>
         /* Settings Modal */
@@ -187,6 +197,9 @@
     <div id="app-screen">
         
         <div id="channels">
+            <div id="server-header">
+                AuraChat
+            </div>
             <div class="channels-list">
                 <h4>METİN KANALLARI</h4>
                 <div class="channel-item active-channel" data-type="chat" data-id="ana-sohbet-kanali"># genel-sohbet</div>
@@ -196,6 +209,9 @@
                     <div class="channel-item" data-type="voice" data-id="ana-ses-odasi">🔊 Ana Ses Odası</div>
                     <div class="voice-user-list" data-channel-id="ana-ses-odasi"></div>
                 </div>
+                
+                <h4 style="margin-top: 20px;">ÖZEL MESAJLAR</h4>
+                <div id="dm-channels-list"></div>
             </div>
             <div id="profile-bar">
                 <div class="profile-info">
@@ -204,7 +220,7 @@
                 </div>
                 <div class="profile-controls">
                     <button id="settings-btn" class="control-btn" title="Ayarlar">⚙️</button>
-                    <button id="logout-btn" class="control-btn" onclick="logout()" title="Çıkış Yap">🚪</button>
+                    <button id="logout-btn" class="control-btn" onclick="logout()" title="Çıkış Yap">⛔</button>
                 </div>
             </div>
         </div>
@@ -234,7 +250,9 @@
         
         <div id="users-online">
             <h4>ÇEVRİMİÇİ KULLANICILAR</h4>
-            <ul id="user-list"></ul>
+            <ul id="user-list"></ul> 
+            <h4 style="margin-top: 20px;">ÇEVRİMDIŞI KULLANICILAR</h4>
+            <ul id="user-list-offline"></ul>
         </div>
     </div>
     <div id="settings-modal">
@@ -268,6 +286,8 @@
         const messages = document.getElementById('messages');
         const messageInput = document.getElementById('message-input');
         const userList = document.getElementById('user-list');
+        const dmChannelsList = document.getElementById('dm-channels-list');
+        const userListOffline = document.getElementById('user-list-offline');
         const muteBtn = document.getElementById('mute-btn');
         const deafenBtn = document.getElementById('deafen-btn');
         const authTitle = document.getElementById('auth-title');
@@ -286,6 +306,7 @@
         const settingAvatarInput = document.getElementById('setting-avatar');
         const profileErrorDisplay = document.getElementById('profile-error-message');
 
+        let myUid = null; // Kendi UID'mizi saklamak için
         const disconnectVoiceBtn = document.getElementById('disconnect-voice-btn');
         const sendButton = document.getElementById('send-button');
         const messageForm = document.getElementById('message-form');
@@ -361,6 +382,7 @@
             initializeSocketEvents(); // Soket olay dinleyicilerini başlat
 
             socket.on('connect', () => {
+                console.log('[Socket.IO] Sunucuya başarıyla bağlandı!');
                 console.log('Sunucuya başarıyla bağlandı!');
                 const authData = { email, password };
                 if (authMode === 'register') { authData.nickname = nickname; }
@@ -393,7 +415,9 @@
             });
 
             socket.on('login success', (data) => {
+                console.log('[Auth] Giriş başarılı:', data.nickname);
                 loginScreen.style.display = 'none';
+                myUid = data.uid; // Kendi UID'mizi sakla
                 appScreen.style.display = 'flex';
                 messageInput.disabled = false;
                 sendButton.disabled = false;
@@ -405,6 +429,7 @@
             });
 
             socket.on('connect_error', (error) => {
+                console.error('[Socket.IO] Bağlantı Hatası:', error);
                 errorDisplay.textContent = `Bağlantı Hatası: Sunucuya erişilemiyor.`;
                 authMainBtn.disabled = false;
                 authMainBtn.textContent = authMode === 'login' ? 'Giriş Yap' : 'Kayıt Ol';
@@ -419,6 +444,7 @@
             // Her giriş denemesinde tekrar tekrar tanımlanmasını önler.
 
             socket.off(); // Önceki tüm dinleyicileri temizle (güvenlik önlemi)
+            console.log('[Socket.IO] Önceki olay dinleyicileri temizlendi.');
 
             // --- SUNUCUDAN GELEN OLAYLARI DİNLEME ---
             socket.on('typing', (data) => {
@@ -428,7 +454,7 @@
             socket.on('chat message', (data) => {
                 if (data.channel === currentChatChannel) {
                     const item = document.createElement('p');
-                    item.className = 'user-msg'; 
+                    item.className = 'user-msg';
                     item.innerHTML = `
                         <img src="${data.avatarUrl}" alt="${data.nickname}" class="msg-avatar" onerror="this.onerror=null;this.src='https://i.pravatar.cc/150?img=6';"> 
                         <div class="msg-content"><div class="msg-meta"><span class="nickname">${data.nickname}</span><span class="timestamp">${new Date(data.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span></div><div class="msg-text">${md.renderInline(data.message)}</div></div>
@@ -436,21 +462,33 @@
                     messages.appendChild(item);
                     messages.scrollTop = messages.scrollHeight;
                 }
+                // Eğer aktif olmayan bir DM'den mesaj geldiyse, sol panelde o DM'i oluştur
+                if (data.channel.startsWith('dm_') && data.channel !== currentChatChannel && data.senderUid !== myUid) {
+                    const uids = data.channel.replace('dm_', '').split('_');
+                    const otherUserUid = uids.find(uid => uid !== myUid);
+                    ensureDmChannelExists(otherUserUid, data.nickname);
+                }
             });
 
             // Kullanıcı Listesini Güncelleme
             socket.on('user list', (onlineUsers) => {
-                userList.innerHTML = '';
-                document.querySelectorAll('.voice-user-list').forEach(list => list.innerHTML = '');
+                userList.innerHTML = ''; 
+                userListOffline.innerHTML = '';
+                document.querySelectorAll('.voice-user-list').forEach(list => list.innerHTML = ''); // Önce sesli kanalları temizle
                 
-                if (onlineUsers.length === 0) {
+                const online = onlineUsers.filter(u => u.isOnline);
+                const offline = onlineUsers.filter(u => !u.isOnline);
+
+                if (online.length === 0) {
                     const emptyMessage = document.createElement('li');
                     emptyMessage.className = 'user-list-item';
                     emptyMessage.style.justifyContent = 'center';
                     emptyMessage.style.color = '#8a929b';
-                    emptyMessage.textContent = 'Çevrimiçi kullanıcı yok.';
+                    emptyMessage.textContent = 'Kimse çevrimiçi değil.';
                     userList.appendChild(emptyMessage);
-                } else {
+                }
+
+                if (onlineUsers && onlineUsers.length > 0) {
                     onlineUsers.forEach(user => {
                         const status = user.status || {};
                         
@@ -478,48 +516,103 @@
                             }
                         }
 
-                        const li = document.createElement('li');
-                        li.className = 'user-list-item';
-                        li.innerHTML = `
-                            <img src="${user.avatarUrl}" alt="${user.nickname}" class="user-list-avatar" onerror="this.onerror=null;this.src='https://i.pravatar.cc/150?img=6';"> 
-                            <span class="user-list-name">${user.nickname}</span>
-                            <span class="user-status-dot"></span>
-                        `;
-                        userList.appendChild(li);
+                        if (user.isOnline) {
+                            const li = document.createElement('li');
+                            li.dataset.uid = user.uid;
+                            li.dataset.nickname = user.nickname;
+                            li.className = 'user-list-item';
+                            li.innerHTML = `
+                                <img src="${user.avatarUrl}" alt="${user.nickname}" class="user-list-avatar" onerror="this.onerror=null;this.src='https://i.pravatar.cc/150?img=6';"> 
+                                <span class="user-list-name">${user.nickname}</span>
+                                <span class="user-status-dot" style="background-color: var(--color-online)"></span>
+                            `;
+                            userList.appendChild(li); 
+                        } else {
+                            const li = document.createElement('li');
+                            li.dataset.uid = user.uid;
+                            li.dataset.nickname = user.nickname;
+                            li.className = 'user-list-item offline';
+                            li.innerHTML = `
+                                <img src="${user.avatarUrl}" alt="${user.nickname}" class="user-list-avatar" onerror="this.onerror=null;this.src='https://i.pravatar.cc/150?img=6';"> 
+                                <span class="user-list-name">${user.nickname}</span>
+                                <span class="user-status-dot" style="background-color: #72767d"></span>
+                            `;
+                            userListOffline.appendChild(li); 
+                        }
                     });
+                } else {
+                    // Hiç kullanıcı yoksa (veritabanı boşsa)
+                } 
+            });
+
+            socket.on('dm history', async (dmChannels) => {
+                const allUsers = [...userList.children, ...userListOffline.children];
+                dmChannels.forEach(dm => {
+                    const otherUserElement = Array.from(allUsers).find(el => el.dataset.uid === dm.otherUserUid);
+                    if (otherUserElement) {
+                        const nickname = otherUserElement.dataset.nickname;
+                        ensureDmChannelExists(dm.otherUserUid, nickname);
+                    } else {
+                        // Eğer kullanıcı listede yoksa (eski bir kullanıcı olabilir),
+                        // sunucudan bu kullanıcının bilgisini ayrıca istemek gerekebilir.
+                        // Şimdilik bu durumu atlıyoruz.
+                        console.warn(`DM geçmişinde bulunan ${dm.otherUserUid} UID'li kullanıcı, mevcut kullanıcı listesinde bulunamadı.`);
+                    }
+                });
+            });
+            // Tarayıcı bildirim izni iste
+            if (Notification.permission === "default") {
+                Notification.requestPermission();
+            }
+            socket.on('past messages', (data) => {
+                if (data.channelId === currentChatChannel) {
+                    messages.innerHTML = ''; // Mevcut mesajları temizle 
+                    data.messages.forEach(msg => {
+                        appendChatMessage(msg);
+                    });
+                    messages.scrollTop = messages.scrollHeight;
                 }
             });
 
             // --- SES KANALI MANTIĞI ---       
-            socket.on('user joined', (newUserId) => { if (newUserId !== socket.id) { createPeerConnection(newUserId, true); } });
-            socket.on('ready to talk', (otherUsers) => { otherUsers.forEach(userId => { createPeerConnection(userId, true); }); });
+            socket.on('user joined', (newUserId) => { console.log(`[Socket.IO] Kullanıcı katıldı: ${newUserId}`); if (newUserId !== socket.id) { createPeerConnection(newUserId, true); } });
+            socket.on('ready to talk', (otherUsers) => { console.log('[Socket.IO] Konuşmaya hazır kullanıcılar:', otherUsers); otherUsers.forEach(userId => { createPeerConnection(userId, true); }); });
             socket.on('user left', (userId) => { 
+                console.log(`[Socket.IO] Kullanıcı ayrıldı: ${userId}`);
                 if (peerConnections[userId]) { 
                     peerConnections[userId].close(); 
                     delete peerConnections[userId]; 
+                    console.log(`[WebRTC] PeerConnection kapatıldı ve silindi: ${userId}`);
                 }
                 const audioEl = document.getElementById(`audio-${userId}`);
                 if (audioEl) {
                     audioEl.remove();
+                    console.log(`[WebRTC] Audio elementi kaldırıldı: audio-${userId}`);
                 }
             });
             socket.on('offer', (sendingUserId, offer) => { 
+                console.log(`[Socket.IO] Offer alındı from ${sendingUserId}`);
                 createPeerConnection(sendingUserId, false); 
                 const pc = peerConnections[sendingUserId];
                 if (pc) {
                     pc.setRemoteDescription(new RTCSessionDescription(offer))
+                        .then(() => console.log(`[WebRTC] RemoteDescription (Offer) ayarlandı for ${sendingUserId}`))
                         .then(() => pc.createAnswer())
+                        .then(answer => { console.log(`[WebRTC] Answer oluşturuldu for ${sendingUserId}`); return answer; })
                         .then(answer => pc.setLocalDescription(answer))
+                        .then(() => console.log(`[WebRTC] LocalDescription (Answer) ayarlandı for ${sendingUserId}`))
                         .then(() => { socket.emit('answer', sendingUserId, pc.localDescription); });
                 }
             });
-            socket.on('answer', (sendingUserId, answer) => { 
+            socket.on('answer', (sendingUserId, answer) => {
+                console.log(`[Socket.IO] Answer alındı from ${sendingUserId}`);
                 const pc = peerConnections[sendingUserId];
-                if (pc) pc.setRemoteDescription(new RTCSessionDescription(answer)); 
+                if (pc) pc.setRemoteDescription(new RTCSessionDescription(answer)).then(() => console.log(`[WebRTC] RemoteDescription (Answer) ayarlandı for ${sendingUserId}`)); 
             });
-            socket.on('candidate', (sendingUserId, candidate) => { 
+            socket.on('candidate', (sendingUserId, candidate) => {
+                console.log(`[Socket.IO] ICE Candidate alındı from ${sendingUserId}`);
                 const pc = peerConnections[sendingUserId];
-                if (pc) pc.addIceCandidate(new RTCIceCandidate(candidate)); 
+                if (pc) pc.addIceCandidate(new RTCIceCandidate(candidate)).then(() => console.log(`[WebRTC] ICE Candidate eklendi for ${sendingUserId}`)); 
             });
         }
         
@@ -538,11 +631,22 @@
 
         // --- DİĞER KANAL VE SES FONKSİYONLARI ---
         function switchChatChannel(newChannelId) {
-            currentChatChannel = newChannelId;
-            // ... (bu kısım önceki düzeltmelerde zaten doğru çalışıyordu)
+            if (currentChatChannel === newChannelId) return;
 
-            messages.innerHTML = `<p class="system-msg">#${newChannelId} kanalına geçildi.</p>`;
-            document.getElementById('chat-header').textContent = `# ${newChannelId}`;
+            currentChatChannel = newChannelId;
+            
+            document.querySelectorAll('.channel-item').forEach(el => el.classList.remove('active-channel'));
+            const newChannelElement = document.querySelector(`.channel-item[data-id="${newChannelId}"]`);
+            if (newChannelElement) newChannelElement.classList.add('active-channel');
+
+            socket.emit('request past messages', newChannelId);
+
+            if (newChannelId.startsWith('dm_')) {
+                const headerText = newChannelElement ? newChannelElement.dataset.nickname : 'Özel Mesaj';
+                document.getElementById('chat-header').textContent = `@ ${headerText}`;
+            } else {
+                document.getElementById('chat-header').textContent = `# ${newChannelId}`;
+            }
         }
 
         function joinChannel(channelId, channelType) {
@@ -618,6 +722,18 @@
             });
             // Belgenin herhangi bir yerine tıklayınca bağlam menüsünü gizle
             document.addEventListener('click', () => { userContextMenu.style.display = 'none'; });
+
+            // Tarayıcı bildirim izni iste
+            if (Notification.permission === "default") {
+                Notification.requestPermission();
+            }
+
+            // Kullanıcı listelerine tıklama olayını delege et
+            document.getElementById('users-online').addEventListener('click', (e) => {
+                const targetUserItem = e.target.closest('.user-list-item');
+                if (targetUserItem) openDmChannel(targetUserItem.dataset.uid, targetUserItem.dataset.nickname);
+            });
+
         });
 
         function saveProfileChanges() {
@@ -632,7 +748,52 @@
             profileErrorDisplay.textContent = 'Kaydediliyor...';
             socket.emit('update profile', { newNickname, newAvatarUrl: newAvatar });
         }
+
+        function openDmChannel(targetUid, targetNickname) {
+            if (targetUid === myUid) {
+                alert("Kendinize özel mesaj gönderemezsiniz.");
+                return;
+            }
+
+            const uids = [myUid, targetUid].sort();
+            const dmChannelId = `dm_${uids[0]}_${uids[1]}`;
+
+            // Eğer DM kanalı soldaki listede yoksa oluştur
+            if (!document.querySelector(`.channel-item[data-id="${dmChannelId}"]`)) {
+                const dmItem = document.createElement('div');
+                dmItem.className = 'channel-item';
+                dmItem.dataset.id = dmChannelId;
+                dmItem.dataset.type = 'chat';
+                dmItem.dataset.nickname = targetNickname;
+                dmItem.textContent = `@ ${targetNickname}`;
+                dmItem.onclick = () => switchChatChannel(dmChannelId);
+                dmChannelsList.appendChild(dmItem);
+            }
+
+            switchChatChannel(dmChannelId);
+            return dmChannelId;
+        }
         
+        function ensureDmChannelExists(targetUid, targetNickname) {
+            const uids = [myUid, targetUid].sort();
+            const dmChannelId = `dm_${uids[0]}_${uids[1]}`;
+
+            // Eğer DM kanalı soldaki listede yoksa oluştur
+            if (!document.querySelector(`.channel-item[data-id="${dmChannelId}"]`)) {
+                console.log(`DM kanalı oluşturuluyor: ${dmChannelId} for ${targetNickname}`);
+                const dmItem = document.createElement('div');
+                dmItem.className = 'channel-item';
+                dmItem.dataset.id = dmChannelId;
+                dmItem.dataset.type = 'chat';
+                dmItem.dataset.nickname = targetNickname;
+                dmItem.textContent = `@ ${targetNickname}`;
+                dmItem.onclick = (e) => { e.stopPropagation(); switchChatChannel(dmChannelId); };
+                dmChannelsList.appendChild(dmItem);
+            }
+            // DM kanalı zaten varsa bir şey yapmaya gerek yok, sadece varlığını garanti ediyoruz.
+            return dmChannelId;
+        }
+
         function toggleMute() { 
             if (!localStream) return;
             isMuted = !isMuted;
@@ -728,11 +889,13 @@
         
         function createPeerConnection(userId, isOfferer) {
             const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+            console.log(`[WebRTC] Yeni RTCPeerConnection oluşturuldu for ${userId}. IsOfferer: ${isOfferer}`);
             peerConnections[userId] = pc;
-            localStream.getTracks().forEach(track => { pc.addTrack(track, localStream); }); // Yerel akışı peer bağlantısına ekle
+            localStream.getTracks().forEach(track => { pc.addTrack(track, localStream); console.log(`[WebRTC] Yerel akış eklendi to ${userId}'s PeerConnection:`, track); }); // Yerel akışı peer bağlantısına ekle
             
             pc.ontrack = (event) => {
-                const remoteAudio = document.createElement('audio');
+                console.log(`[WebRTC] Remote track alındı from ${userId}:`, event.track);
+                const remoteAudio = document.createElement('audio'); // Her kullanıcı için benzersiz ID
                 remoteAudio.id = `audio-${userId}`; // Her kullanıcı için benzersiz ID
                 remoteAudio.autoplay = true;
                 document.body.appendChild(remoteAudio); 
@@ -740,14 +903,18 @@
                 if (event.streams && event.streams[0]) { // Gelen akışı kontrol et
                     remoteAudio.srcObject = event.streams[0];
                 }
+                // Daha güvenli bir atama: event.track'ten yeni bir MediaStream oluştur
+                remoteAudio.srcObject = new MediaStream([event.track]);
+                console.log(`[WebRTC] Audio elementi oluşturuldu ve srcObject ayarlandı for ${userId}:`, remoteAudio.srcObject);
             };
             pc.onicecandidate = (event) => {
-                if (event.candidate) { socket.emit('candidate', userId, event.candidate); }
+                if (event.candidate) { console.log(`[WebRTC] ICE Candidate oluşturuldu ve gönderiliyor to ${userId}:`, event.candidate); socket.emit('candidate', userId, event.candidate); }
             };
             
             if (isOfferer) {
                 pc.onnegotiationneeded = () => {
                     pc.createOffer()
+                        .then(offer => { console.log(`[WebRTC] Offer oluşturuldu for ${userId}`); return offer; })
                         .then(offer => pc.setLocalDescription(offer))
                         .then(() => { socket.emit('offer', userId, pc.localDescription); });
                 };
