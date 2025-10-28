@@ -2,9 +2,6 @@ const { app, BrowserWindow, ipcMain, session } = require('electron');
 const path = require('path');
 const { autoUpdater } = require('electron-updater');
 
-// 💡 YENİ: Discord Rich Presence (DRPC) için
-const RPC = require('discord-rpc');
-
 let mainWindow;
 let splashWindow;
 
@@ -110,40 +107,6 @@ function createWindow() {
     app.setBadgeCount(count);
   });
 }
-
-// 💡 YENİ: Discord Rich Presence (DRPC) Entegrasyonu
-const clientId = '1432555308483481692'; // Discord Geliştirici Portalı'ndan kendi ID'nizi alın
-let rpc;
-
-async function setDiscordActivity(activity) {
-  if (!rpc) {
-    console.log('[DRPC] RPC istemcisi başlatılmamış.');
-    return;
-  }
-  try {
-    await rpc.setActivity(activity);
-    console.log('[DRPC] Discord etkinliği güncellendi:', activity);
-  } catch (error) {
-    console.error('[DRPC] Discord etkinliği güncellenirken hata:', error);
-  }
-}
-
-ipcMain.on('update-rich-presence', async (event, data) => {
-  if (!rpc) {
-    rpc = new RPC.Client({ transport: 'ipc' });
-    rpc.on('ready', () => {
-      console.log('[DRPC] Discord RPC istemcisi hazır!');
-      setDiscordActivity(data);
-    });
-    rpc.on('disconnected', () => {
-      console.log('[DRPC] Discord RPC bağlantısı kesildi.');
-      rpc = null; // Bağlantı kesildiğinde RPC istemcisini sıfırla
-    });
-    try {
-      await rpc.login({ clientId });
-    } catch (error) { console.error('[DRPC] Discord RPC giriş hatası:', error); rpc = null; }
-  } else { setDiscordActivity(data); }
-});
 
 app.whenReady().then(() => {
   createWindow();
