@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, session } = require('electron');
 const path = require('path');
 const { autoUpdater } = require('electron-updater');
 
@@ -6,7 +6,23 @@ let mainWindow;
 let splashWindow;
 
 function createWindow() {
-  // Açılış ekranı penceresini oluştur
+  // Ana uygulama penceresini oluştur
+  mainWindow = new BrowserWindow({
+    width: 1200,
+    height: 650,
+    // 💡 YENİ SATIR: Pencere ve görev çubuğu ikonunu ayarlar. Proje ana dizininde 'icon.png' olmalıdır.
+    icon: path.join(__dirname, 'icon.png'),
+    // 💡 YENİ SATIR: Çerçeveyi ve menü çubuğunu kaldırır.
+    frame: false, 
+    // --------------------------izin--------------------------
+    show: false, // Başlangıçta titremeyi önlemek için gizle
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false 
+    }
+  });
+
+  // 💡 YENİ: Açılış ekranı (splash) penceresini oluştur.
   splashWindow = new BrowserWindow({
     width: 400,
     height: 300,
@@ -17,31 +33,28 @@ function createWindow() {
   });
   splashWindow.loadFile('splash.html');
 
-  // Ana uygulama penceresini oluştur ama gösterme
-  mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 650,
-    // 💡 YENİ SATIR: Pencere ve görev çubuğu ikonunu ayarlar. Proje ana dizininde 'icon.png' olmalıdır.
-    icon: path.join(__dirname, 'icon.png'),
-    // 💡 YENİ SATIR: Çerçeveyi ve menü çubuğunu kaldırır.
-    frame: false, 
-    // ----------------------------------------------------
-    show: false, // Pencereyi başlangıçta gizle
-    webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false 
-    }
-  });
-
   // Ana pencere içeriği yüklendiğinde, açılış ekranını kapat ve ana pencereyi göster
-  mainWindow.once('ready-to-show', () => {
-    setTimeout(() => { // Yüklemenin çok hızlı bitmesi durumunda bile splash'in kısa bir süre görünmesi için
+  mainWindow.once('ready-to-show', () => { 
+    // Yüklemenin çok hızlı bitmesi durumunda bile splash'in kısa bir süre görünmesi için küçük bir gecikme ekle.
+    setTimeout(() => {
         splashWindow.destroy();
         mainWindow.show();
-    }, 1500); // Yarım saniye bekle
+    }, 500); // Yarım saniye bekle
   });
   mainWindow.loadFile('index.html'); // Ana pencere içeriğini yüklemeye başla
-
+  
+  // 💡 YENİ: Medya erişim izinlerini yönetmek için en kararlı yöntem.
+  // Bu handler, arayüzden gelen izin isteklerini yakalar ve callback ile yanıtlar.
+  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback, details) => {
+    // Sadece 'media' (kamera/mikrofon) ve özellikle 'audio' (mikrofon) izinlerini kontrol et.
+    if (permission === 'media' && details.mediaTypes?.includes('audio')) {
+      // Otomatik olarak izin ver.
+      callback(true);
+    } else {
+      callback(false); // Diğer tüm istekleri reddet
+    }
+  });
+  
   // --- OTOMATİK GÜNCELLEME ---
   // Geliştirme ortamında loglamayı etkinleştir
   autoUpdater.logger = require("electron-log");
