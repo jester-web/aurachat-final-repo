@@ -5,6 +5,7 @@ const admin = require('firebase-admin');
 const fs = require('fs');
 const path = require('path'); 
 const multer = require('multer');
+const crypto = require('crypto'); // 💡 YENİ: Güvenli token oluşturmak için
 const markdownit = require('markdown-it'); // Markdown kütüphanesini dahil et
 
 const app = express();
@@ -125,6 +126,36 @@ const onlineUsers = {};
 const userStatus = {};      
 const AVATAR_URLS = [ 'https://i.pravatar.cc/150?img=1', 'https://i.pravatar.cc/150?img=2', 'https://i.pravatar.cc/150?img=3', 'https://i.pravatar.cc/150?img=4', 'https://i.pravatar.cc/150?img=5' ];
 
+// 💡 YENİ: Otomatik giriş anahtarlarını saklamak için (bellekte)
+const autoLoginTokens = new Map(); // Map<token, uid>
+
+async function handleSuccessfulLogin(socket, uid, rememberMe = false) {
+    const userDoc = await db.collection('users').doc(uid).get();
+    if (!userDoc.exists) {
+        socket.emit('auth error', 'Kullanıcı veritabanında bulunamadı.');
+        return;
+    }
+    const userData = userDoc.data();
+
+    onlineUsers[socket.id] = { ...userData, socketId: socket.id };
+    // 💡 DÜZELTME: Kullanıcı durumuna 'presence' (varlık) alanı eklendi.
+    userStatus[socket.id] = { presence: 'online', muted: false, deafened: false, speaking: false, channel: null }; 
+
+    socket.join(TEAM_ID);
+    io.to(TEAM_ID).emit('system message', { message: `${userData.nickname} sohbete katıldı.` });
+
+    let authToken = null;
+    if (rememberMe) {
+        authToken = crypto.randomBytes(32).toString('hex');
+        autoLoginTokens.set(authToken, uid);
+    }
+
+    socket.emit('login success', { ...userData, authToken });
+    console.log(`[SUNUCU] Giriş başarılı: ${userData.nickname}`);
+
+    await Promise.all([ sendChannelList(socket), sendPastMessages(socket, MAIN_CHANNEL), sendDmHistory(socket, uid), getAllUsers().then(users => io.to(TEAM_ID).emit('user list', users)) ]);
+    socket.emit('initial data loaded');
+}
 
 async function getAllUsers() {
     const allUsersSnapshot = await db.collection('users').get();
@@ -133,13 +164,14 @@ async function getAllUsers() {
     allUsersSnapshot.forEach(doc => {
         const userData = doc.data();
         const isOnline = Object.values(onlineUsers).some(onlineUser => onlineUser.uid === userData.uid);
-        const socketId = isOnline ? Object.keys(onlineUsers).find(sid => onlineUsers[sid].uid === userData.uid) : null;
+        // 💡 DÜZELTME: Kullanıcının socketId'sini doğru şekilde bul.
+        const socketId = isOnline ? Object.keys(onlineUsers).find(sid => onlineUsers[sid].uid === userData.uid) : null; 
 
         allUsers.push({
             uid: userData.uid,
             nickname: userData.nickname,
             avatarUrl: userData.avatarUrl,
-            isOnline: isOnline,
+            role: userData.role || 'member', // 💡 YENİ: Kullanıcının rolünü ekle (varsayılan 'member')
             status: isOnline ? (userStatus[socketId] || {}) : {}
         });
     });
@@ -148,7 +180,29 @@ async function getAllUsers() {
 }
 
 io.on('connection', (socket) => {
-    
+
+  // 💡 YENİ: Otomatik Giriş (Middleware gibi çalışır)
+  // Bağlantı anında istemciden gelen token'ı kontrol et
+  (async () => {
+      const token = socket.handshake.auth.token;
+      if (token && autoLoginTokens.has(token)) {
+          const uid = autoLoginTokens.get(token);
+          console.log(`[SUNUCU] Otomatik giriş denemesi başarılı. UID: ${uid}`);
+          
+          // Eski token'ı silip yenisini oluşturarak güvenliği artır
+          autoLoginTokens.delete(token);
+          const newAuthToken = crypto.randomBytes(32).toString('hex');
+          autoLoginTokens.set(newAuthToken, uid);
+          
+          // İstemciye yeni token'ı gönder
+          socket.emit('token-refreshed', newAuthToken);
+
+          // Normal giriş akışını devam ettir
+          await handleSuccessfulLogin(socket, uid, true); // rememberMe: true
+          return; // Token ile giriş yapıldıysa, diğer auth olaylarını bekleme
+      }
+  })();
+
   // ------------------------------------
   // 0. KAYIT/GİRİŞ (FIREBASE KULLANILDI)
   // ------------------------------------
@@ -166,7 +220,8 @@ io.on('connection', (socket) => {
               nickname,
               avatarUrl: randomAvatar,
               email: email.toLowerCase(),
-              uid: userRecord.uid
+            uid: userRecord.uid,
+            role: 'member' // 💡 YENİ: Kayıt olurken varsayılan rol ata
           });
 
           console.log(`[SUNUCU] Yeni kayıt (Firebase): ${nickname}`);
@@ -180,39 +235,17 @@ io.on('connection', (socket) => {
       }
   });
 
-  socket.on('login', async ({ email, password }) => {
+  socket.on('login', async ({ email, password, rememberMe }) => {
       try {
           const userQuery = await db.collection('users').where('email', '==', email.toLowerCase()).limit(1).get();
           if (userQuery.empty) {
                socket.emit('auth error', 'E-posta veya şifre hatalı.');
                return;
           }
-          const userData = userQuery.docs[0].data();
           const uid = userQuery.docs[0].id;
           
-          onlineUsers[socket.id] = { nickname: userData.nickname, avatarUrl: userData.avatarUrl, email: userData.email, socketId: socket.id, uid: uid };
-          userStatus[socket.id] = { presence: 'online', muted: false, deafened: false, speaking: false, channel: null }; // 💡 YENİ: Varsayılan durum 'online'
-          
-          socket.join(TEAM_ID); 
-
-          // 💡 YENİ: Kullanıcı katıldı mesajı gönder
-          io.to(TEAM_ID).emit('system message', { message: `${userData.nickname} sohbete katıldı.` });
-
-          // 💡 DÜZELTME: İstemcinin UID'yi alabilmesi için login success olayına uid eklendi.
-          socket.emit('login success', { nickname: userData.nickname, avatarUrl: userData.avatarUrl, uid: uid });
-          
-          console.log(`[SUNUCU] Giriş başarılı: ${userData.nickname}`);
-
-          // 💡 DÜZELTME: Tüm başlangıç verilerinin gönderilmesi beklenip ardından 'initial data loaded' olayı tetikleniyor.
-          // Bu, istemcinin yükleme ekranında takılı kalmasını engeller.
-          await Promise.all([
-              sendChannelList(socket),
-              sendPastMessages(socket, MAIN_CHANNEL),
-              sendDmHistory(socket, uid),
-              getAllUsers().then(users => io.to(TEAM_ID).emit('user list', users))
-          ]);
-          socket.emit('initial data loaded');
-
+          // 💡 YENİ: Başarılı giriş mantığını merkezi fonksiyona taşı
+          await handleSuccessfulLogin(socket, uid, rememberMe);
       } catch (err) {
           // Firebase kimlik doğrulama hatası (örneğin, yanlış şifre)
           console.error('Giriş hatası:', err.code, err.message);
@@ -256,13 +289,14 @@ io.on('connection', (socket) => {
 
   // 💡 YENİ: Kullanıcı durumu güncelleme
   socket.on('set status', (newStatus) => {
-    const user = onlineUsers[socket.id];
-    if (!user || !userStatus[socket.id]) return;
+    if (!userStatus[socket.id]) return;
 
     // 'online', 'idle', 'dnd', 'invisible' gibi geçerli durumları kontrol et
     const validStatuses = ['online', 'idle', 'dnd', 'invisible'];
     if (validStatuses.includes(newStatus)) {
+        console.log(`[SUNUCU] Durum güncellendi: ${onlineUsers[socket.id]?.nickname} -> ${newStatus}`);
         userStatus[socket.id].presence = newStatus;
+        // 💡 DÜZELTME: Durum değiştiğinde tüm kullanıcılara güncel listeyi gönder.
         getAllUsers().then(users => io.to(TEAM_ID).emit('user list', users));
     }
   });
@@ -379,6 +413,17 @@ io.on('connection', (socket) => {
       if (!user) return;
 
       let messageData;
+
+      // 💡 YENİ: DM kanalı için Firestore belgesinin varlığını kontrol et/oluştur
+      if (data.channelId.startsWith('dm_')) {
+          const uids = data.channelId.replace('dm_', '').split('_').sort(); // Tutarlı sıralama için
+          const dmChannelDocId = `dm_${uids[0]}_${uids[1]}`;
+          const dmChannelRef = db.collection('dm-channels').doc(dmChannelDocId);
+          const dmChannelDoc = await dmChannelRef.get();
+          if (!dmChannelDoc.exists) {
+              await dmChannelRef.set({ participants: uids, createdAt: admin.firestore.FieldValue.serverTimestamp() });
+          }
+      }
 
       if (data.type === 'file') {
           // Bu bir dosya mesajı
@@ -508,6 +553,15 @@ io.on('connection', (socket) => {
     // Logout olayında disconnect ile aynı işlemleri yap
     handleDisconnect(socket.id);
   });
+  
+  socket.on('logout', () => {
+    const user = onlineUsers[socket.id];
+    if (user) {
+        // Kullanıcının tüm token'larını sil
+        for (const [token, uid] of autoLoginTokens.entries()) { if (uid === user.uid) { autoLoginTokens.delete(token); } }
+    }
+    handleDisconnect(socket.id);
+  });
 
   socket.on('request past messages', (channelId) => {
       sendPastMessages(socket, channelId);
@@ -547,15 +601,24 @@ server.listen(RENDER_PORT, () => {
 // Geçmiş mesajları belirli bir kanaldan çekip gönderen fonksiyon
 async function sendPastMessages(socket, channelId) {
     try {
-        const messagesRef = db.collection('messages')
+        let messagesRef;
+        if (channelId.startsWith('dm_')) {
+            // 💡 DÜZELTME: DM kanalları için mesajlar alt koleksiyonda bulunur.
+            messagesRef = db.collection('dm-channels').doc(channelId).collection('messages')
+                                .orderBy('timestamp', 'desc')
+                                .limit(50);
+        } else {
+            // Genel kanallar için mesajlar ana 'messages' koleksiyonunda bulunur.
+            messagesRef = db.collection('messages')
                                 .where('channel', '==', channelId)
                                 .orderBy('timestamp', 'desc')
-                                .limit(50); // Son 50 mesajı çek
+                                .limit(50);
+        }
         const snapshot = await messagesRef.get();
         const pastMessages = [];
         snapshot.forEach(doc => {
             const data = doc.data();
-            pastMessages.unshift({ ...data, timestamp: data.timestamp.toDate() }); // En eski mesaj en üstte olacak şekilde sırala
+            pastMessages.unshift({ ...data, timestamp: data.timestamp.toDate(), id: doc.id }); // En eski mesaj en üstte olacak şekilde sırala
         });
         socket.emit('past messages', { channelId, messages: pastMessages });
     } catch (error) {
@@ -578,29 +641,30 @@ async function sendChannelList(socket) {
     }
 }
 
-// Kullanıcının dahil olduğu tüm DM kanallarını ve son mesajları getiren fonksiyon
+// 💡 DÜZELTME: Kullanıcının dahil olduğu tüm DM kanallarını ve diğer katılımcı bilgilerini getiren fonksiyon
 async function sendDmHistory(socket, userId) {
   try {
-    const messagesRef = db.collection('messages');
-    // Firestore'da 'array-contains' sorgusu ile kullanıcının dahil olduğu DM kanallarını bulmak daha verimli olur.
-    // Bunun için mesaj dökümanlarında 'participants' [uid1, uid2] gibi bir alan tutmak gerekir.
-    // Mevcut yapıyla devam etmek için, tüm DM'leri çekip filtrelemek yerine, iki ayrı sorgu yapalım.
-    const sentDmsQuery = messagesRef.where('senderUid', '==', userId).where('channel', '>=', 'dm_').get();
-    // Alınan mesajları bulmak için 'participants' alanı olmadan verimli bir sorgu zordur.
-    // Bu yüzden tüm DM'leri çekip filtrelemek şimdilik en basit çözüm.
-    const allDmsSnapshot = await messagesRef.where('channel', '>=', 'dm_').where('channel', '<', 'dm`').get();
+    if (!userId) return console.error('[SUNUCU] sendDmHistory: userId eksik.');
 
-    const dmChannels = new Set(); // Tekrar eden kanalları önlemek için Set kullanalım.
-
-    allDmsSnapshot.forEach(doc => {
-      const data = doc.data();
-      const uids = data.channel.replace('dm_', '').split('_');
-      if (uids.includes(userId)) {
-        dmChannels.add(data.channel);
-      }
-    });
-
-    socket.emit('dm history', Array.from(dmChannels));
+    const dmChannelsSnapshot = await db.collection('dm-channels')
+                                        .where('participants', 'array-contains', userId)
+                                        .get();
+    const dmChannelInfos = [];
+    for (const doc of dmChannelsSnapshot.docs) {
+        const channelId = doc.id;
+        const participants = doc.data().participants;
+        const otherUserUid = participants.find(uid => uid !== userId);
+        
+        if (otherUserUid) {
+            const otherUserDoc = await db.collection('users').doc(otherUserUid).get();
+            if (otherUserDoc.exists) {
+                const otherUserData = otherUserDoc.data();
+                dmChannelInfos.push({ id: channelId, nickname: otherUserData.nickname, avatarUrl: otherUserData.avatarUrl, uid: otherUserUid });
+            }
+        }
+    }
+    socket.emit('dm history', dmChannelInfos);
+    console.log(`[SUNUCU] DM kanalları gönderildi: ${userId} -> ${dmChannelInfos.length} kanal`);
   } catch (error) {
     console.error('DM geçmişi çekerken hata:', error);
   }
