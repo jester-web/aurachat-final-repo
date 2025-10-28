@@ -33,9 +33,6 @@
   "build": {
     "appId": "com.aurachat.ekip",
     "productName": "AuraChat",
-    "externals": [
-      "discord-rpc"
-    ],
     "directories": {
       "output": "dist"
     },
