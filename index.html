@@ -1431,10 +1431,16 @@
                 cancelReplying();
             });
 
-            // 💡 YENİ: Electron ana sürecinden gelen güncelleme olaylarını dinle
+            // 💡 YENİ: Electron ana sürecinden gelen 'update-ready' olayını dinle
             ipcRenderer.on('update-ready', () => {
                 document.getElementById('update-notification').style.display = 'block';
             });
+
+            // 💡 YENİ: "Yeniden Başlat ve Güncelle" butonuna tıklama olayını ekle
+            document.getElementById('restart-app-btn').addEventListener('click', () => {
+                ipcRenderer.send('restart-and-update');
+            });
+
 
             document.getElementById('restart-app-btn').addEventListener('click', () => {
                 ipcRenderer.send('restart-and-update');
