@@ -1,28 +1,68 @@
-const { app, BrowserWindow, ipcMain, session } = require('electron');
+const { app, BrowserWindow, ipcMain, session, powerMonitor } = require('electron');
 const path = require('path');
 const { autoUpdater } = require('electron-updater');
+const RPC = require('discord-rpc'); // Discord RPC paketini dahil et
 
 let mainWindow;
 let splashWindow;
+
+// 💡 DEĞİŞTİR: Discord Geliştirici Portalından aldığın Application ID'si
+// Buraya KENDİ Application ID'nizi yapıştırın!
+const CLIENT_ID = '1432555308483481692'; // Örnek ID
+
+const rpc = new RPC.Client({ transport: 'ipc' });
+let rpcInterval; 
+
+// --- RPC DURUM GÜNCELLEME FONKSİYONLARI ---
+// Bu fonksiyonu arayüz (renderer) ipcMain üzerinden çağıracak.
+function updateDiscordPresence(state = 'Uygulama Başlatılıyor...', details = 'Giriş Ekranı', smallImageKey = 'default_icon') { 
+    if (!rpc.user) return; // RPC bağlı değilse çık
+
+    rpc.setActivity({
+        details: details, // Şu anki eylem (Örn: "Ana Ses Odasında")
+        state: state, // Uygulamanın genel durumu (Örn: "Kullanılabilir")
+        startTimestamp: Date.now(), // Uygulamayı ne zaman açtın
+        largeImageKey: 'aurachat_logo', // Yüklediğin ana ikonun adı
+        smallImageKey: smallImageKey, // Küçük durum ikonu
+        instance: false,
+        buttons: [{ label: 'Ekibe Katıl', url: 'https://aurachat-cyvr.onrender.com' }] 
+    }) 
+    .catch(err => console.error('[Discord RPC Error]', err));
+}
+
+// RPC Bağlantı Mantığı
+async function setRpc() {
+    try {
+        await rpc.login({ clientId: CLIENT_ID });
+        console.log('[Discord RPC] Başarıyla bağlandı!'); 
+        updateDiscordPresence('Çevrimiçi', 'Hazır!'); 
+        
+        // Durumu her 15 saniyede bir güncelle
+        if (rpcInterval) clearInterval(rpcInterval);
+        rpcInterval = setInterval(() => {
+            updateDiscordPresence('Çevrimiçi', 'Hazır!');
+        }, 15000); 
+
+    } catch (error) {
+        console.error('[Discord RPC] Bağlanamadı:', error.message);
+    }
+}
 
 function createWindow() {
   // Ana uygulama penceresini oluştur
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 650,
-    // 💡 YENİ SATIR: Pencere ve görev çubuğu ikonunu ayarlar. Proje ana dizininde 'icon.png' olmalıdır.
     icon: path.join(__dirname, 'icon.png'),
-    // 💡 YENİ SATIR: Çerçeveyi ve menü çubuğunu kaldırır.
     frame: false, 
-    // --------------------------izin--------------------------
     show: false, // Başlangıçta titremeyi önlemek için gizle
     webPreferences: {
       nodeIntegration: true,
-      contextIsolation: false 
+      contextIsolation: false // ipcRenderer kullanmak için gerekli
     }
   });
 
-  // 💡 YENİ: Açılış ekranı (splash) penceresini oluştur.
+  // Açılış ekranı (splash) penceresini oluştur.
   splashWindow = new BrowserWindow({
     width: 400,
     height: 300,
@@ -35,76 +75,64 @@ function createWindow() {
 
   // Ana pencere içeriği yüklendiğinde, açılış ekranını kapat ve ana pencereyi göster
   mainWindow.once('ready-to-show', () => { 
-    // Yüklemenin çok hızlı bitmesi durumunda bile splash'in kısa bir süre görünmesi için küçük bir gecikme ekle.
     setTimeout(() => {
         splashWindow.destroy();
         mainWindow.show();
-    }, 500); // Yarım saniye bekle
+    }, 500); // Kısa bir bekleme
   });
-  mainWindow.loadFile('index.html'); // Ana pencere içeriğini yüklemeye başla
+  mainWindow.loadFile('index.html'); 
   
-  // 💡 YENİ: Medya erişim izinlerini yönetmek için en kararlı yöntem.
-  // Bu handler, arayüzden gelen izin isteklerini yakalar ve callback ile yanıtlar.
+}
+
+// Uygulama hazır olduğunda
+app.whenReady().then(() => {
+  console.log(`[App] Electron uygulaması başlatılıyor... (Sürüm: ${app.getVersion()})`);
+  
+  // 💡 DÜZELTME: RPC'yi pencere oluşturulmadan önce başlatmak daha güvenilirdir.
+  setRpc();
+
+  // 💡 DÜZELTME: Tüm uygulama geneli ayarlar ve olay dinleyicileri buraya taşındı.
+  // Bu, pencere oluşturulmadan önce yalnızca bir kez çalışmalarını garanti eder.
+
+  // Medya erişim izinlerini yönet
   session.defaultSession.setPermissionRequestHandler((webContents, permission, callback, details) => {
-    // Sadece 'media' (kamera/mikrofon) ve özellikle 'audio' (mikrofon) izinlerini kontrol et.
     if (permission === 'media' && details.mediaTypes?.includes('audio')) {
-      // Otomatik olarak izin ver.
-      callback(true);
+      callback(true); // Mikrofon isteğini onayla
     } else {
       callback(false); // Diğer tüm istekleri reddet
     }
   });
-  
-  // --- OTOMATİK GÜNCELLEME ---
-  // Geliştirme ortamında loglamayı etkinleştir
-  autoUpdater.logger = require("electron-log");
-  autoUpdater.logger.transports.file.level = "info";
-  console.log('[Updater] Otomatik güncelleme kontrolü başlatılıyor...');
-  autoUpdater.checkForUpdatesAndNotify();
 
+  // Otomatik güncelleme olaylarını dinle
   autoUpdater.on('update-available', () => {
-    console.log('[Updater] Yeni bir güncelleme mevcut.');
-    // Bu olayı dinleyerek arayüzde "Güncelleme bulunuyor..." gibi bir mesaj gösterebilirsiniz.
+    if (mainWindow) mainWindow.webContents.send('update_available');
   });
-
   autoUpdater.on('update-downloaded', () => {
-    console.log('[Updater] Yeni güncelleme indirildi. Arayüze haber veriliyor.');
-    // Güncelleme indirildiğinde arayüze haber ver.
-    mainWindow.webContents.send('update-ready');
+    if (mainWindow) mainWindow.webContents.send('update_downloaded');
   });
 
-  autoUpdater.on('error', (err) => {
-    console.error('[Updater] Güncelleme sırasında hata:', err);
-  });
-
-  autoUpdater.on('checking-for-update', () => {
-    console.log('[Updater] Güncelleme kontrol ediliyor...');
+  // Sistem kapatma olayını dinle
+  powerMonitor.on('shutdown', () => {
+    console.log('Uygulama kapatılıyor...');
   });
 
   // Pencere kontrol olaylarını dinle
-  ipcMain.on('minimize-app', () => {
-    mainWindow.minimize();
+  ipcMain.on('minimize-app', () => mainWindow?.minimize());
+  ipcMain.on('maximize-app', () => { 
+    if (mainWindow?.isMaximized()) { mainWindow.unmaximize(); } else { mainWindow?.maximize(); } 
+  });
+  ipcMain.on('close-app', () => mainWindow?.close());
+  ipcMain.on('restart-and-update', () => autoUpdater.quitAndInstall());
+  
+  // RPC durum güncelleme isteğini dinle
+  ipcMain.on('update-rpc-presence', (event, state, details, smallImage) => {
+    updateDiscordPresence(state, details, smallImage);
   });
 
-  ipcMain.on('maximize-app', () => {
-    if (mainWindow.isMaximized()) {
-      mainWindow.unmaximize();
-    } else {
-      mainWindow.maximize();
-    }
-  });
-  ipcMain.on('close-app', () => {
-    mainWindow.close();
-  });
-
-  // Arayüzden gelen yeniden başlatma isteğini dinle
-  ipcMain.on('restart-and-update', () => {
-    autoUpdater.quitAndInstall();
-  });
-}
-
-app.whenReady().then(() => {
+  // Tüm ayarlar yapıldıktan sonra ana pencereyi oluştur.
   createWindow();
+  
+  autoUpdater.checkForUpdatesAndNotify();
 
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
@@ -112,5 +140,7 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', function () {
-  if (process.platform !== 'darwin') app.quit();
+    if (process.platform !== 'darwin') app.quit();
+    if (rpcInterval) clearInterval(rpcInterval);
+    if (rpc.user) rpc.destroy();
 });
