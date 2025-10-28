@@ -19,9 +19,11 @@ const VOICE_CHANNEL_ID = 'ana-ses-odasi';
 // Dosya yükleme dizinleri
 const uploadsDir = path.join(__dirname, 'uploads');
 const avatarsDir = path.join(uploadsDir, 'avatars');
+const filesDir = path.join(uploadsDir, 'files'); // 💡 YENİ: Genel dosyalar için yeni klasör
 
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
 if (!fs.existsSync(avatarsDir)) fs.mkdirSync(avatarsDir);
+if (!fs.existsSync(filesDir)) fs.mkdirSync(filesDir); // 💡 YENİ: Klasörü oluştur
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
@@ -34,6 +36,17 @@ const avatarStorage = multer.diskStorage({
 });
 const uploadAvatar = multer({ storage: avatarStorage });
 
+// 💡 YENİ: Genel dosyalar için yeni multer yapılandırması
+const fileStorage = multer.diskStorage({
+    destination: function (req, file, cb) { cb(null, filesDir) },
+    filename: function (req, file, cb) {
+        // Orijinal dosya adını koruyarak benzersiz bir ön ek ekle
+        const uniquePrefix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, uniquePrefix + '-' + file.originalname);
+    }
+});
+const uploadFile = multer({ storage: fileStorage });
+
 // Yeni Avatar Yükleme Endpoint'i
 app.post('/upload-avatar', uploadAvatar.single('avatar'), (req, res) => {
     if (!req.file) {
@@ -44,6 +57,21 @@ app.post('/upload-avatar', uploadAvatar.single('avatar'), (req, res) => {
     const protocol = req.protocol;
     const avatarUrl = `${protocol}://${host}/uploads/avatars/${req.file.filename}`;
     res.json({ avatarUrl: avatarUrl });
+});
+
+// 💡 YENİ: Genel Dosya Yükleme Endpoint'i
+app.post('/upload-file', uploadFile.single('file'), (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ error: 'Dosya yüklenmedi.' });
+    }
+    const host = req.get('host');
+    const protocol = req.protocol;
+    const fileUrl = `${protocol}://${host}/uploads/files/${req.file.filename}`;
+    res.json({ 
+        fileUrl: fileUrl,
+        fileName: req.file.originalname, // Orijinal dosya adını geri gönder
+        fileType: req.file.mimetype // Dosya türünü geri gönder
+    });
 });
 
 // --- FIREBASE BAĞLANTISI (RENDER AYARI) ---
@@ -70,6 +98,26 @@ try {
     console.error('[HATA] Firebase başlatılamadı. ServiceAccount Anahtarı eksik/hatalı.');
     process.exit(1);
 }
+
+// 💡 YENİ: Sunucu başlangıcında varsayılan kanalların varlığını kontrol et
+async function ensureDefaultChannels() {
+    const textChannelRef = db.collection('channels').doc(MAIN_CHANNEL);
+    const voiceChannelRef = db.collection('channels').doc(VOICE_CHANNEL_ID);
+
+    const textDoc = await textChannelRef.get();
+    if (!textDoc.exists) {
+        console.log(`[SUNUCU] Varsayılan metin kanalı '${MAIN_CHANNEL}' bulunamadı, oluşturuluyor...`);
+        await textChannelRef.set({ name: 'genel-sohbet', type: 'text' });
+    }
+    const voiceDoc = await voiceChannelRef.get();
+    if (!voiceDoc.exists) {
+        console.log(`[SUNUCU] Varsayılan ses kanalı '${VOICE_CHANNEL_ID}' bulunamadı, oluşturuluyor...`);
+        await voiceChannelRef.set({ name: 'Sohbet Odası', type: 'voice' });
+    }
+}
+
+// Sunucu başladığında bu fonksiyonu çağır
+ensureDefaultChannels();
 
 const md = markdownit(); // Markdown parser'ı başlat
 
@@ -143,9 +191,12 @@ io.on('connection', (socket) => {
           const uid = userQuery.docs[0].id;
           
           onlineUsers[socket.id] = { nickname: userData.nickname, avatarUrl: userData.avatarUrl, email: userData.email, socketId: socket.id, uid: uid };
-          userStatus[socket.id] = { muted: false, deafened: false, speaking: false, channel: null };
+          userStatus[socket.id] = { presence: 'online', muted: false, deafened: false, speaking: false, channel: null }; // 💡 YENİ: Varsayılan durum 'online'
           
           socket.join(TEAM_ID); 
+
+          // 💡 YENİ: Kullanıcı katıldı mesajı gönder
+          io.to(TEAM_ID).emit('system message', { message: `${userData.nickname} sohbete katıldı.` });
 
           // 💡 DÜZELTME: İstemcinin UID'yi alabilmesi için login success olayına uid eklendi.
           socket.emit('login success', { nickname: userData.nickname, avatarUrl: userData.avatarUrl, uid: uid });
@@ -178,16 +229,20 @@ io.on('connection', (socket) => {
 
     try {
         const userRef = db.collection('users').doc(user.uid);
+        const userDoc = await userRef.get();
+        const currentData = userDoc.data();
         
-        await userRef.update({
-            nickname: newNickname,
-            avatarUrl: newAvatarUrl || user.avatarUrl
-        });
+        const updateData = {
+            nickname: newNickname || currentData.nickname,
+            avatarUrl: newAvatarUrl || currentData.avatarUrl
+        };
+        await userRef.update(updateData);
 
-        user.nickname = newNickname;
-        user.avatarUrl = newAvatarUrl || user.avatarUrl;
+        user.nickname = updateData.nickname;
+        user.avatarUrl = updateData.avatarUrl;
         
-        await auth.updateUser(user.uid, { displayName: newNickname, photoURL: newAvatarUrl });
+        // Firebase Auth tarafını da güncelle
+        await auth.updateUser(user.uid, { displayName: updateData.nickname, photoURL: updateData.avatarUrl });
         
         socket.emit('profile update success', { nickname: user.nickname, avatarUrl: user.avatarUrl });
         // Profil güncellendiğinde tüm kullanıcılara listeyi tekrar gönder
@@ -196,6 +251,95 @@ io.on('connection', (socket) => {
     } catch(err) {
         console.error('Profil güncelleme hatası:', err.message);
         socket.emit('profile update error', 'Profil güncellenirken bir hata oluştu.');
+    }
+  });
+
+  // 💡 YENİ: Kullanıcı durumu güncelleme
+  socket.on('set status', (newStatus) => {
+    const user = onlineUsers[socket.id];
+    if (!user || !userStatus[socket.id]) return;
+
+    // 'online', 'idle', 'dnd', 'invisible' gibi geçerli durumları kontrol et
+    const validStatuses = ['online', 'idle', 'dnd', 'invisible'];
+    if (validStatuses.includes(newStatus)) {
+        userStatus[socket.id].presence = newStatus;
+        getAllUsers().then(users => io.to(TEAM_ID).emit('user list', users));
+    }
+  });
+
+  // 💡 YENİ: Mesaj tepkisi ekleme/kaldırma
+  socket.on('message reaction', async ({ messageId, emoji }) => {
+    const user = onlineUsers[socket.id];
+    if (!user) return;
+
+    const messageRef = db.collection('messages').doc(messageId);
+
+    try {
+      await db.runTransaction(async (transaction) => {
+        const messageDoc = await transaction.get(messageRef);
+        if (!messageDoc.exists) return;
+
+        const data = messageDoc.data();
+        const reactions = data.reactions || {};
+        
+        if (!reactions[emoji]) {
+          reactions[emoji] = [];
+        }
+
+        const userIndex = reactions[emoji].indexOf(user.uid);
+        if (userIndex > -1) {
+          // Kullanıcı zaten bu emoji ile tepki vermiş, tepkisini kaldır
+          reactions[emoji].splice(userIndex, 1);
+          if (reactions[emoji].length === 0) {
+            delete reactions[emoji];
+          }
+        } else {
+          // Kullanıcı yeni tepki veriyor
+          reactions[emoji].push(user.uid);
+        }
+        transaction.update(messageRef, { reactions });
+        io.to(TEAM_ID).emit('reaction update', { messageId, reactions });
+      });
+    } catch (error) {
+      console.error('Tepki işlenirken hata:', error);
+    }
+  });
+
+  // 💡 YENİ: Mesaj silme
+  socket.on('delete message', async (messageId) => {
+    const user = onlineUsers[socket.id];
+    if (!user) return;
+
+    const messageRef = db.collection('messages').doc(messageId);
+    try {
+      const doc = await messageRef.get();
+      if (doc.exists && doc.data().senderUid === user.uid) {
+        await messageRef.delete();
+        io.to(TEAM_ID).emit('message deleted', { messageId });
+      } else {
+        // Yetkisiz silme denemesi
+        socket.emit('system error', 'Bu mesajı silme yetkiniz yok.');
+      }
+    } catch (error) {
+      console.error('Mesaj silinirken hata:', error);
+    }
+  });
+
+  // 💡 YENİ: Mesaj düzenleme
+  socket.on('edit message', async ({ messageId, newMessage }) => {
+    const user = onlineUsers[socket.id];
+    if (!user) return;
+
+    const messageRef = db.collection('messages').doc(messageId);
+    try {
+      const doc = await messageRef.get();
+      if (doc.exists && doc.data().senderUid === user.uid) {
+        const sanitizedMessage = md.renderInline(newMessage);
+        await messageRef.update({ message: sanitizedMessage, edited: true });
+        io.to(TEAM_ID).emit('message edited', { messageId, newMessage: sanitizedMessage });
+      }
+    } catch (error) {
+      console.error('Mesaj düzenlenirken hata:', error);
     }
   });
 
@@ -230,15 +374,59 @@ io.on('connection', (socket) => {
   // CHAT, SES ve DİĞER FONKSİYONLAR
   // ------------------------------------
   
-  socket.on('chat message', (data) => {
+  socket.on('chat message', async (data) => {
       const user = onlineUsers[socket.id];
       if (!user) return;
 
-      const sanitizedMessage = md.renderInline(data.message);
-      const messageData = { nickname: user.nickname, avatarUrl: user.avatarUrl, message: sanitizedMessage, channel: data.channelId, timestamp: admin.firestore.FieldValue.serverTimestamp(), senderUid: user.uid };
-      db.collection('messages').add(messageData);
+      let messageData;
 
-      const finalMessage = { ...messageData, timestamp: new Date() };
+      if (data.type === 'file') {
+          // Bu bir dosya mesajı
+          messageData = { 
+              nickname: user.nickname, avatarUrl: user.avatarUrl, 
+              message: data.fileName, // Mesaj içeriği olarak dosya adı
+              fileUrl: data.fileUrl,
+              fileType: data.fileType,
+              type: 'file', // Mesaj türünü belirt
+              channel: data.channelId, 
+              timestamp: admin.firestore.FieldValue.serverTimestamp(), 
+              senderUid: user.uid, 
+              reactions: {},
+              replyTo: data.replyTo || null,
+              edited: false
+          };
+      } else {
+          // Bu bir metin mesajı
+          const sanitizedMessage = md.renderInline(data.message);
+
+          // 💡 YENİ: @bahsetme (mention) işleme
+          const allUsernames = Object.values(onlineUsers).map(u => u.nickname);
+          // Regex ile @kullaniciadi formatını bul ve değiştir
+          const mentionedMessage = sanitizedMessage.replace(/@(\w+)/g, (match, username) => {
+              // Kullanıcı adının tam olarak eşleşip eşleşmediğini kontrol et (büyük/küçük harf duyarsız)
+              const foundUser = Object.values(onlineUsers).find(u => u.nickname.toLowerCase() === username.toLowerCase());
+              if (foundUser) {
+                  return `<span class="mention" data-uid="${foundUser.uid}">@${foundUser.nickname}</span>`;
+              }
+              return match; // Eşleşme bulunamazsa orijinal metni koru
+          });
+
+          messageData = {
+              nickname: user.nickname, 
+              avatarUrl: user.avatarUrl, 
+              message: mentionedMessage, // İşlenmiş mesajı kaydet
+              channel: data.channelId, 
+              timestamp: admin.firestore.FieldValue.serverTimestamp(), 
+              senderUid: user.uid, type: 'text', 
+              reactions: {},
+              replyTo: data.replyTo || null,
+              edited: false
+          };
+      }
+
+      const docRef = await db.collection('messages').add(messageData); // Önce veritabanına ekle
+
+      const finalMessage = { ...messageData, timestamp: new Date(), id: docRef.id };
 
       if (data.channelId.startsWith('dm_')) {
           // Bu bir özel mesaj (DM)
@@ -334,6 +522,9 @@ io.on('connection', (socket) => {
     console.log(`[SUNUCU] Kullanıcı bağlantısı kesildi: ${socketId}`);
     const user = onlineUsers[socketId];
     if (!user) return;
+
+    // 💡 YENİ: Kullanıcı ayrıldı mesajı gönder
+    io.to(TEAM_ID).emit('system message', { message: `${user.nickname} sohbetten ayrıldı.` });
     
     // Eğer sesli kanaldaysa, kanaldan ayrıldığını bildir
     if (userStatus[socketId].channel) {
@@ -389,32 +580,28 @@ async function sendChannelList(socket) {
 
 // Kullanıcının dahil olduğu tüm DM kanallarını ve son mesajları getiren fonksiyon
 async function sendDmHistory(socket, userId) {
-    try {
-        const messagesRef = db.collection('messages');
-        // Kullanıcının gönderen veya alıcı olduğu DM'leri bul
-        const sentDmsQuery = messagesRef.where('senderUid', '==', userId).where('channel', '>=', 'dm_').where('channel', '<', 'dm`').get();
-        const receivedDmsQuery = messagesRef.where('channel', '>=', 'dm_').where('channel', '<', 'dm`').get(); // Bu daha karmaşık, şimdilik basitleştirelim
+  try {
+    const messagesRef = db.collection('messages');
+    // Firestore'da 'array-contains' sorgusu ile kullanıcının dahil olduğu DM kanallarını bulmak daha verimli olur.
+    // Bunun için mesaj dökümanlarında 'participants' [uid1, uid2] gibi bir alan tutmak gerekir.
+    // Mevcut yapıyla devam etmek için, tüm DM'leri çekip filtrelemek yerine, iki ayrı sorgu yapalım.
+    const sentDmsQuery = messagesRef.where('senderUid', '==', userId).where('channel', '>=', 'dm_').get();
+    // Alınan mesajları bulmak için 'participants' alanı olmadan verimli bir sorgu zordur.
+    // Bu yüzden tüm DM'leri çekip filtrelemek şimdilik en basit çözüm.
+    const allDmsSnapshot = await messagesRef.where('channel', '>=', 'dm_').where('channel', '<', 'dm`').get();
 
-        const allDmsSnapshot = await messagesRef.where('channel', '>=', 'dm_').where('channel', '<', 'dm`').orderBy('timestamp', 'desc').get();
+    const dmChannels = new Set(); // Tekrar eden kanalları önlemek için Set kullanalım.
 
-        const dmChannels = {};
+    allDmsSnapshot.forEach(doc => {
+      const data = doc.data();
+      const uids = data.channel.replace('dm_', '').split('_');
+      if (uids.includes(userId)) {
+        dmChannels.add(data.channel);
+      }
+    });
 
-        allDmsSnapshot.forEach(doc => {
-            const data = doc.data();
-            const uids = data.channel.replace('dm_', '').split('_');
-            if (uids.includes(userId)) {
-                if (!dmChannels[data.channel]) {
-                    const otherUserUid = uids.find(uid => uid !== userId);
-                    dmChannels[data.channel] = {
-                        channelId: data.channel,
-                        otherUserUid: otherUserUid,
-                        // Diğer kullanıcının bilgilerini de eklemek daha iyi olur, şimdilik UID yeterli
-                    };
-                }
-            }
-        });
-        socket.emit('dm history', Object.values(dmChannels));
-    } catch (error) {
-        console.error('DM geçmişi çekerken hata:', error);
-    }
+    socket.emit('dm history', Array.from(dmChannels));
+  } catch (error) {
+    console.error('DM geçmişi çekerken hata:', error);
+  }
 }
