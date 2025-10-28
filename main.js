@@ -58,9 +58,10 @@ function createWindow() {
   // --- OTOMATİK GÜNCELLEME ---
   // Geliştirme ortamında loglamayı etkinleştir
   autoUpdater.logger = require("electron-log");
-  autoUpdater.logger.transports.file.level = "info";
-  console.log('[Updater] Otomatik güncelleme kontrolü başlatılıyor...');
-  autoUpdater.checkForUpdatesAndNotify();
+  autoUpdater.logger.transports.file.level = "info";  
+  
+  // 💡 DÜZELTME: Otomatik bildirimleri devre dışı bırakıp manuel kontrol sağlıyoruz.
+  // autoUpdater.checkForUpdatesAndNotify();
 
   autoUpdater.on('update-available', () => {
     console.log('[Updater] Yeni bir güncelleme mevcut.');
@@ -69,12 +70,17 @@ function createWindow() {
 
   autoUpdater.on('update-downloaded', () => {
     console.log('[Updater] Yeni güncelleme indirildi. Arayüze haber veriliyor.');
-    // Güncelleme indirildiğinde arayüze haber ver.
+    // 💡 YENİ: Güncelleme indirildiğinde arayüze haber ver.
     mainWindow.webContents.send('update-ready');
   });
 
   autoUpdater.on('error', (err) => {
     console.error('[Updater] Güncelleme sırasında hata:', err);
+  });
+  
+  // 💡 YENİ: Arayüzden gelen yeniden başlatma isteğini dinle
+  ipcMain.on('restart-and-update', () => {
+    autoUpdater.quitAndInstall();
   });
 
   autoUpdater.on('checking-for-update', () => {
@@ -97,11 +103,6 @@ function createWindow() {
     mainWindow.close();
   });
 
-  // Arayüzden gelen yeniden başlatma isteğini dinle
-  ipcMain.on('restart-and-update', () => {
-    autoUpdater.quitAndInstall();
-  });
-
   // 💡 YENİ: Arayüzden gelen okunmamış mesaj sayısını dinle ve tepsi ikonuna yansıt.
   ipcMain.on('update-badge', (event, count) => {
     app.setBadgeCount(count);
@@ -110,6 +111,9 @@ function createWindow() {
 
 app.whenReady().then(() => {
   createWindow();
+  
+  // 💡 YENİ: Uygulama hazır olduğunda güncelleme kontrolünü başlat.
+  autoUpdater.checkForUpdates();
 
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
