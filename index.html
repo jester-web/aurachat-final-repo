@@ -120,6 +120,16 @@
         .channel-item.new-message-highlight::before {
             content: '●'; color: var(--color-link); font-size: 1.2em; line-height: 0;
         }
+        /* 💡 YENİ: Okunmamış mesaj sayacı için stil */
+        .unread-badge {
+            background-color: var(--color-danger);
+            color: white;
+            border-radius: 8px;
+            padding: 1px 5px;
+            font-size: 0.7em;
+            font-weight: bold;
+            margin-left: auto;
+        }
         
         /* KANAL ALTINDAKİ ÜYE KARTLARI */ 
         .voice-user-list { padding-left: 15px; margin-top: 5px; }
@@ -605,6 +615,11 @@
     <div id="channel-context-menu" class="context-menu">
         <div class="context-menu-item" id="delete-channel-btn">Kanalı Sil</div>
     </div>
+    <!-- 💡 YENİ: Sesli Kullanıcı Sağ Tık Menüsü -->
+    <div id="voice-user-context-menu" class="context-menu">
+        <label for="voice-user-volume-slider">Kullanıcı Sesi</label>
+        <input type="range" id="voice-user-volume-slider" min="0" max="2" step="0.05" value="1">
+    </div>
     <!-- socket.io istemci kütüphanesini CDN'den yüklüyoruz -->
     <div id="status-menu" class="context-menu">
         <div class="context-menu-item" data-status="online"><span class="user-status-dot status-online" style="margin-left: 0; margin-right: 10px;"></span>Çevrimiçi</div>
@@ -663,6 +678,7 @@
         const messageForm = document.getElementById('message-form');
         const typingIndicator = document.getElementById('typing-indicator');
         const userContextMenu = document.getElementById('user-context-menu');
+        const voiceUserContextMenu = document.getElementById('voice-user-context-menu');
         const channelContextMenu = document.getElementById('channel-context-menu');
 
         const voiceControlsBar = document.getElementById('voice-controls-bar');
@@ -680,6 +696,9 @@
         let micSource;
         let isSpeaking = false;
         const SPEAK_THRESHOLD = 50; 
+
+        let userVolumes = JSON.parse(localStorage.getItem('userVolumes')) || {};
+        let unreadCounts = {}; // 💡 YENİ: Okunmamış mesajları takip etmek için
 
         let authMode = 'login';
         
@@ -801,21 +820,26 @@
                     messages.scrollTop = messages.scrollHeight;
                 }
 
-                // Eğer aktif olmayan bir DM'den mesaj geldiyse, sol panelde o DM'i oluştur ve vurgula
-                if (data.channel.startsWith('dm_') && data.channel !== currentChatChannel && data.senderUid !== myUid) {
+                // 💡 YENİ: Okunmamış mesaj takibi
+                if (data.channel !== currentChatChannel && data.senderUid !== myUid) {
+                    // DM ise ve listede yoksa oluştur
                     const uids = data.channel.replace('dm_', '').split('_');
                     const otherUserUid = uids.find(uid => uid !== myUid);
-                    
-                    // DM kanalının sol panelde var olduğundan emin ol
-                    ensureDmChannelExists(otherUserUid, data.nickname);
-
-                    // DM kanalını vurgula
-                    const dmChannelElement = document.querySelector(`.channel-item[data-id="${data.channel}"]`);
-                    if (dmChannelElement) {
-                        dmChannelElement.classList.add('new-message-highlight');
+                    if (data.channel.startsWith('dm_') && otherUserUid) {
+                         ensureDmChannelExists(otherUserUid, data.nickname);
                     }
 
+                    // Sayacı artır ve arayüzü güncelle
+                    unreadCounts[data.channel] = (unreadCounts[data.channel] || 0) + 1;
+                    updateUnreadBadge(data.channel);
+                    updateTotalBadgeCount();
+
                     // Tarayıcı bildirimi göster
+                    // 💡 YENİ: Özel hoş geldin mesajı gibi bildirim
+                    const notificationTitle = data.channel.startsWith('dm_') ? `Yeni Mesaj: ${data.nickname}` : `Yeni Mesaj: #${document.querySelector(`.channel-item[data-id="${data.channel}"] span`)?.textContent || 'Sohbet'}`;
+                    const notificationBody = data.type === 'file' ? 'Bir dosya gönderdi' : data.message.replace(/<[^>]*>?/gm, '');
+
+
                     if (Notification.permission === "granted") {
                         new Notification(`Yeni DM: ${data.nickname}`, {
                             body: data.message.replace(/<[^>]*>?/gm, ''), // HTML etiketlerini temizle
@@ -949,6 +973,24 @@
                     userList.appendChild(emptyMessage);
                 }
 
+                // 💡 YENİ: Sesli kanaldaki kullanıcılar için kart oluşturma
+                onlineUsers.forEach(user => {
+                    const status = user.status || {};
+                    if (status.channel) {
+                        const listContainer = document.querySelector(`.voice-user-list[data-channel-id="${status.channel}"]`);
+                        if (listContainer) {
+                            const userCard = createVoiceUserCard(user, status);
+                            // 💡 YENİ: Uzaktan ses ayarı için sağ tık menüsü
+                            userCard.addEventListener('contextmenu', (e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                openVoiceUserContextMenu(e, user.uid);
+                            });
+                            listContainer.appendChild(userCard);
+                        }
+                    }
+                });
+
                 if (onlineUsers && onlineUsers.length > 0) {
                     onlineUsers.forEach(user => {
                         // Kullanıcı bilgilerini cache'le
@@ -1074,6 +1116,13 @@
                 newChannelElement.classList.add('active-channel');
                 newChannelElement.classList.remove('new-message-highlight'); // Vurguyu kaldır
             } 
+
+            // 💡 YENİ: Kanala girince okunmamış sayacını sıfırla
+            if (unreadCounts[newChannelId]) {
+                unreadCounts[newChannelId] = 0;
+                updateUnreadBadge(newChannelId);
+                updateTotalBadgeCount();
+            }
 
             socket.emit('request past messages', newChannelId);
 
@@ -1287,6 +1336,12 @@
                 ipcRenderer.send('restart-and-update');
             });
 
+            // 💡 YENİ: Kicked (atılma) olayını dinle
+            socket.on('kicked', (data) => {
+                alert(data.reason || 'Sunucudan atıldınız.');
+                logout();
+            });
+
             document.addEventListener('click', () => { userContextMenu.style.display = 'none'; channelContextMenu.style.display = 'none'; statusMenu.style.display = 'none'; });
         });
 
@@ -1421,6 +1476,37 @@
             return dmChannelId;
         }
         
+        // 💡 YENİ: Sesli kanaldaki kullanıcı kartını oluşturan fonksiyon
+        function createVoiceUserCard(user, status) {
+            const userCard = document.createElement('div');
+            userCard.className = 'voice-user-container';
+            if (status.speaking && !status.muted) userCard.classList.add('speaking-user');
+            if (status.muted) userCard.classList.add('muted');
+            if (status.deafened) userCard.classList.add('deafened');
+
+            let statusIcons = '';
+            if (status.muted) statusIcons += '<span class="muted-icon">🎤</span>';
+            if (status.deafened) statusIcons += '<span class="deafened-icon">🔕</span>';
+
+            userCard.innerHTML = `
+                <img class="voice-user-avatar" src="${user.avatarUrl}" alt="${user.nickname}">
+                <div class="voice-user-name">${user.nickname}</div>
+                <div class="voice-user-icons">${statusIcons}</div>
+            `;
+            return userCard;
+        }
+
+        // 💡 YENİ: Sesli kullanıcı sağ tık menüsünü açan ve yöneten fonksiyon
+        function openVoiceUserContextMenu(event, targetUid) {
+            const slider = document.getElementById('voice-user-volume-slider');
+            slider.value = userVolumes[targetUid] !== undefined ? userVolumes[targetUid] : 1;
+            slider.oninput = () => handleRemoteVolumeChange(targetUid, parseFloat(slider.value));
+
+            voiceUserContextMenu.style.display = 'block';
+            voiceUserContextMenu.style.left = `${event.pageX}px`;
+            voiceUserContextMenu.style.top = `${event.pageY}px`;
+        }
+
         function addChannelToDOM(channel) {
             const channelItem = document.createElement('div');
             channelItem.className = 'channel-item';
@@ -1481,6 +1567,17 @@
             deafenBtn.classList.toggle('active-status', isDeafened);
             deafenBtn.querySelector('span').textContent = isDeafened ? '🔕' : '🎧';
             socket.emit('toggle status', { status: 'deafen', value: isDeafened });
+        }
+
+        // 💡 YENİ: Uzaktaki kullanıcının ses seviyesini ayarlayan fonksiyon
+        function handleRemoteVolumeChange(targetUid, volume) {
+            userVolumes[targetUid] = volume;
+            localStorage.setItem('userVolumes', JSON.stringify(userVolumes));
+            const targetSocketId = Array.from(userCache.values()).find(u => u.uid === targetUid)?.socketId;
+            if (targetSocketId) {
+                const audioEl = document.getElementById(`audio-${targetSocketId}`);
+                if (audioEl) audioEl.volume = volume;
+            }
         }
 
         function leaveCurrentVoiceChannel() {
@@ -1601,6 +1698,30 @@ navigator.mediaDevices.getUserMedia({
             return pc;
         }
 
+        // 💡 YENİ: Okunmamış mesaj sayacını güncelleyen fonksiyon
+        function updateUnreadBadge(channelId) {
+            const channelElement = document.querySelector(`.channel-item[data-id="${channelId}"]`);
+            if (!channelElement) return;
+
+            let badge = channelElement.querySelector('.unread-badge');
+            if (unreadCounts[channelId] > 0) {
+                if (!badge) {
+                    badge = document.createElement('span');
+                    badge.className = 'unread-badge';
+                    channelElement.appendChild(badge);
+                }
+                badge.textContent = unreadCounts[channelId];
+            } else if (badge) {
+                badge.remove();
+            }
+        }
+
+        // 💡 YENİ: Toplam okunmamış mesaj sayısını hesaplayıp sistem tepsisine gönderen fonksiyon
+        function updateTotalBadgeCount() {
+            const totalUnread = Object.values(unreadCounts).reduce((sum, count) => sum + count, 0);
+            ipcRenderer.send('update-badge', totalUnread);
+        }
+
         function startReplying(messageId) {
             const messageElement = document.getElementById(`message-${messageId}`);
             if (!messageElement) return;
@@ -1696,29 +1817,6 @@ navigator.mediaDevices.getUserMedia({
             errorDisplay.textContent = ''; // Giriş ekranındaki hata mesajını temizle
         }
 
-        function renderReactions(container, messageId, reactions) {
-            container.innerHTML = '';
-            if (!reactions) return;
-
-            for (const emoji in reactions) {
-                const users = reactions[emoji];
-                if (users.length > 0) {
-                    const bubble = document.createElement('div');
-                    bubble.className = 'reaction-bubble';
-                    bubble.dataset.emoji = emoji;
-                    bubble.dataset.messageId = messageId;
-                    if (users.includes(myUid)) {
-                        bubble.classList.add('reacted-by-me');
-                    }
-                    bubble.innerHTML = `<span class="reaction-emoji">${emoji}</span> ${users.length}`;
-                    container.appendChild(bubble);
-                }
-            }
-        }
     </script>
 </body>
-<script>
-
-</script>
-
 </html>
