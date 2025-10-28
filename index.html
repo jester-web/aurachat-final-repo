@@ -91,6 +91,31 @@
         #toggle-auth-btn { background: none; border: none; color: var(--color-link); text-decoration: underline; font-size: 0.9em; margin-top: 20px; cursor: pointer; }
         #toggle-auth-btn:hover { color: #a482f7; }
 
+        /* 💡 YENİ: "Beni Hatırla" için Toggle Switch Tasarımı */
+        .remember-me-container {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            margin-top: 5px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            -webkit-user-select: none; user-select: none;
+        }
+        .remember-me-container label { font-size: 0.9em; color: var(--color-text); cursor: pointer; }
+        .remember-me-container input { display: none; }
+        .toggle-switch {
+            width: 38px; height: 20px; background-color: var(--bg-dark); border-radius: 10px;
+            position: relative; transition: background-color 0.3s; margin-right: 10px;
+            border: 1px solid var(--border-color);
+        }
+        .toggle-switch::before {
+            content: ''; position: absolute; left: 2px; top: 2px;
+            width: 16px; height: 16px; background-color: #72767d;
+            border-radius: 50%; transition: transform 0.3s, background-color 0.3s;
+        }
+        .remember-me-container input:checked + .toggle-switch { background-color: var(--color-success); }
+        .remember-me-container input:checked + .toggle-switch::before { transform: translateX(18px); background-color: white; }
+
         /* UYGULAMA EKRANI */
         #app-screen { display: none; width: 100%; height: 100%; flex-direction: row; flex-grow: 1; }
         #channels { width: 240px; background-color: var(--bg-medium); display: flex; flex-direction: column; border-right: 1px solid var(--border-color); }
@@ -154,6 +179,7 @@
             border-bottom: 1px solid var(--border-color);
             align-items: center;
             justify-content: space-between;
+            gap: 10px; /* Ses kanalı adı ile butonlar arasına boşluk */
         } 
         #voice-channel-name { font-weight: 500; color: var(--color-text); }
         #messages { flex-grow: 1; overflow-y: auto; padding: 10px 20px; }
@@ -249,6 +275,22 @@
         .user-list-item.offline .user-list-name { color: #72767d; }
         .user-status-dot { width: 8px; height: 8px; border-radius: 50%; background-color: var(--color-online); margin-left: auto; }
 
+        /* 💡 YENİ: Rol Etiketi Stilleri */
+        .user-role-tag {
+            font-size: 0.7em;
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: white;
+            white-space: nowrap; /* Rol adının tek satırda kalmasını sağlar */
+        }
+        .role-admin { background-color: #e74c3c; } /* Kırmızı */
+        .role-moderator { background-color: #f1c40f; } /* Sarı */
+        .role-member { background-color: #2ecc71; } /* Yeşil */
+        .role-guest { background-color: #95a5a6; } /* Gri */
         /* Custom Scrollbar */
         ::-webkit-scrollbar {
             width: 8px;
@@ -262,8 +304,6 @@
         }
         /* Durum Renkleri */
         .status-online { background-color: var(--color-online); }
-        .status-idle { background-color: #FAA61A; } /* Sarı */
-        .status-dnd { background-color: var(--color-danger); } /* Kırmızı */
         .status-invisible, .status-offline { background-color: #747F8D; } /* Gri */
         /* User Context Menu */
         .context-menu {
@@ -296,6 +336,7 @@
         .profile-info:hover { background-color: var(--bg-light); }
         #my-avatar-container { position: relative; }
         #my-status-dot {
+            /* 💡 YENİ: Konuşma göstergesi için stil */
             position: absolute;
             bottom: 0;
             right: 0;
@@ -304,6 +345,7 @@
             border-radius: 50%;
             border: 2px solid var(--bg-medium);
         }
+
         #my-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; margin-right: 8px; }
         #my-nickname { font-weight: 600; font-size: 0.9em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .profile-controls { display: flex; align-items: center; gap: 5px; }
@@ -321,8 +363,8 @@
         #server-header:hover { background-color: rgba(255,255,255,0.05); }
     </style>
     <style>
-        .control-btn.muted-icon::before { content: '🔇'; }
-        .control-btn.deafened-icon::before { content: '🔕'; }
+        .control-btn.muted-icon::before { content: '🅾️'; }
+        .control-btn.deafened-icon::before { content: '🔇'; }
     </style>
     <style>
         /* Settings Modal */
@@ -467,13 +509,19 @@
             <img src="./icon.png" alt="AuraChat Icon" class="login-app-icon">
             <h2 id="auth-title">Giriş Yap</h2>
             <form id="auth-form" onsubmit="authenticate(event)">
-                <input type="text" id="server-url-input" placeholder="Sunucu Adresi" value="https://aurachat-final-repo.onrender.com" style="display:none;">
-                <input type="text" id="server-url-input" placeholder="Sunucu Adresi" value="http://localhost:3000" style="display:none;">
+                <!-- Sunucu adresini buradan ayarlayın. Yerel test için localhost, dağıtım için Render URL'si. -->
+                <input type="text" id="server-url-input" placeholder="Sunucu Adresi" value="http://localhost:3000" style="display:none;"> 
                 <div id="nickname-input-container">
                     <input type="text" id="nickname-input" placeholder="Kullanıcı Adı">
                 </div>
                 <input type="email" id="email-input" placeholder="E-posta" required>
                 <input type="password" id="password-input" placeholder="Şifre" required>
+                <!-- 💡 YENİ: "Beni Hatırla" butonu -->
+                <div id="remember-me-box" class="remember-me-container">
+                    <input type="checkbox" id="remember-me-checkbox">
+                    <span class="toggle-switch"></span>
+                    <label for="remember-me-checkbox">Beni Hatırla</label>
+                </div>
                 <button type="submit" id="auth-main-btn">Giriş Yap</button>
             </form>
             <p id="login-error"></p>
@@ -486,16 +534,12 @@
         <div id="channels">
             <div id="server-header">
                 AuraChat
-            </div>
+            </div>            
             <div class="channels-list">
                 <h4><span>METİN KANALLARI</span> <button class="add-channel-btn" data-type="text">+</button></h4>
-                <div id="text-channels-list">
-                    <div class="channel-item active-channel" data-type="chat" data-id="ana-sohbet-kanali"># genel-sohbet</div>
-                </div>
+                <div id="text-channels-list"></div>
                 <h4><span>SES KANALLARI</span> <button class="add-channel-btn" data-type="voice">+</button></h4>
-                <div id="voice-channels-list" class="voice-channel-group">
-                    <div class="channel-item" data-type="voice" data-id="ana-ses-odasi">🔊 Sohbet Odası</div>
-                    <div class="voice-user-list" data-channel-id="ana-ses-odasi"></div>
+                <div id="voice-channels-list">
                 </div>
                 
                 <h4 style="margin-top: 20px;">ÖZEL MESAJLAR</h4>
@@ -566,14 +610,14 @@
                         <div class="avatar-editor">
                             <img id="setting-avatar-preview" src="" alt="Avatar Önizleme">
                             <button id="change-avatar-btn">Avatarı Değiştir</button>
+                            <!-- 💡 YENİ: Gizli dosya yükleme input'u -->
+                            <input type="file" id="setting-avatar-file-input" accept="image/*" style="display: none;">
                         </div>
                         <div class="details-editor">
                             <h3>Profil Ayarları</h3>
                             <p id="profile-error-message"></p>
                             <label for="setting-nickname">Kullanıcı Adı</label>
                             <input type="text" id="setting-nickname" placeholder="Yeni Kullanıcı Adı" required>
-                            <label for="setting-avatar">Avatar URL</label>
-                            <input type="text" id="setting-avatar" placeholder="Yeni Avatar URL'si">
                         </div>
                     </div>
                     <div class="settings-buttons">
@@ -598,6 +642,7 @@
                         <input type="range" id="output-volume" min="0" max="1" step="0.01" value="1">
                     </div>
                     <div class="settings-buttons">
+                        <button id="close-settings-btn">İptal</button>
                         <!-- Bu buton şimdilik bir şey yapmıyor ama gelecekte kullanılabilir -->
                         <button id="save-audio-settings-btn">Değişiklikleri Kaydet</button>
                     </div>
@@ -619,13 +664,6 @@
     <div id="voice-user-context-menu" class="context-menu">
         <label for="voice-user-volume-slider">Kullanıcı Sesi</label>
         <input type="range" id="voice-user-volume-slider" min="0" max="2" step="0.05" value="1">
-    </div>
-    <!-- socket.io istemci kütüphanesini CDN'den yüklüyoruz -->
-    <div id="status-menu" class="context-menu">
-        <div class="context-menu-item" data-status="online"><span class="user-status-dot status-online" style="margin-left: 0; margin-right: 10px;"></span>Çevrimiçi</div>
-        <div class="context-menu-item" data-status="idle"><span class="user-status-dot status-idle" style="margin-left: 0; margin-right: 10px;"></span>Boşta</div>
-        <div class="context-menu-item" data-status="dnd"><span class="user-status-dot status-dnd" style="margin-left: 0; margin-right: 10px;"></span>Rahatsız Etmeyin</div>
-        <div class="context-menu-item" data-status="invisible"><span class="user-status-dot status-invisible" style="margin-left: 0; margin-right: 10px;"></span>Görünmez</div>
     </div>
 
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
@@ -655,17 +693,18 @@
         const nicknameContainer = document.getElementById('nickname-input-container');
         const emailInput = document.getElementById('email-input');
         const passwordInput = document.getElementById('password-input');
+        const rememberMeBox = document.getElementById('remember-me-box'); // 💡 YENİ
 
+        const myAvatarContainer = document.getElementById('my-avatar-container');
         const myAvatar = document.getElementById('my-avatar');
         const myStatusDot = document.getElementById('my-status-dot');
         const myNickname = document.getElementById('my-nickname');
         const profileInfo = document.getElementById('profile-info');
-        const statusMenu = document.getElementById('status-menu');
 
         const settingsModal = document.getElementById('settings-modal');
         const settingNicknameInput = document.getElementById('setting-nickname');
         const settingAvatarInput = document.getElementById('setting-avatar');
-        const settingAvatarFileInput = document.getElementById('setting-avatar-file');
+        const settingAvatarFileInput = document.getElementById('setting-avatar-file-input'); // 💡 DÜZELTME: Doğru ID'yi kullan
         const audioInputDeviceSelect = document.getElementById('audio-input-device');
         const audioOutputDeviceSelect = document.getElementById('audio-output-device');
         const outputVolumeSlider = document.getElementById('output-volume');
@@ -721,12 +760,14 @@
                 authMainBtn.textContent = 'Kayıt Ol';
                 toggleAuthBtn.textContent = 'Zaten hesabın var mı? Giriş Yap';
                 nicknameContainer.style.maxHeight = '100px'; // Animasyon için
+                rememberMeBox.style.display = 'none'; // 💡 YENİ: Kayıt ekranında gizle
                 nicknameInput.required = true;
             } else {
                 authTitle.textContent = 'Giriş Yap';
                 authMainBtn.textContent = 'Giriş Yap';
                 toggleAuthBtn.textContent = 'Hesabın yok mu? Kayıt Ol';
                 nicknameContainer.style.maxHeight = '0';
+                rememberMeBox.style.display = 'flex'; // 💡 YENİ: Giriş ekranında göster
                 nicknameInput.required = false;
             }
         }
@@ -738,6 +779,7 @@
             const email = emailInput.value.trim();
             const password = passwordInput.value;
             const nickname = nicknameInput.value.trim();
+            const rememberMe = document.getElementById('remember-me-checkbox').checked; // 💡 YENİ
 
             if (!email || !password) {
                 errorDisplay.textContent = 'E-posta ve şifre alanları zorunludur.';
@@ -752,11 +794,19 @@
             authMainBtn.disabled = true;
             authMainBtn.textContent = 'Lütfen Bekleyin...';
 
-            if (socket && socket.connected) { socket.disconnect(); } // Mevcut soket bağlantısını kes
-            socket = io(serverUrl);
-
-            initializeSocketEvents(); // Soket olay dinleyicilerini başlat
-
+            // Eğer soket bağlı değilse, yeni bağlantı kur.
+            if (!socket || !socket.connected) {
+                socket = io(serverUrl, { 
+                    autoConnect: false,
+                    auth: { token: localStorage.getItem('aura-auth-token') } // 💡 YENİ: Otomatik giriş için token gönder
+                }); 
+                initializeSocketEvents(); // Olayları SADECE yeni soket oluşturulduğunda ata
+                socket.connect(); // Manuel olarak bağlan
+            } else {
+                // Zaten bağlı bir soket varsa, sadece kimlik doğrulama olayını tetikle.
+                // Bu senaryo normalde yaşanmaz ama bir güvenlik önlemidir.
+                triggerAuthentication();
+            }
         }
         
         function initializeSocketEvents() {
@@ -770,18 +820,8 @@
 
             // --- AUTH OLAYLARI ---
             socket.on('connect', () => {
-                console.log('[Socket.IO] Sunucuya başarıyla bağlandı!');
-                const email = emailInput.value.trim();
-                const password = passwordInput.value;
-                const nickname = nicknameInput.value.trim();
-                const authData = { email, password };
-                if (authMode === 'register') { authData.nickname = nickname; }
-
-                if (authMode === 'register') {
-                    socket.emit('register', authData);
-                } else {
-                    socket.emit('login', authData);
-                }
+                triggerAuthentication();
+                updateDiscordPresence(); // 💡 YENİ: Bağlantı kurulduğunda Discord durumunu güncelle
             });
 
             socket.on('auth error', (message) => {
@@ -792,6 +832,7 @@
             });
 
             socket.on('auth success', (data) => {
+                updateDiscordPresence(); // 💡 YENİ: Giriş başarılı olduğunda Discord durumunu güncelle
                 if (data.type === 'register') {
                     // Kayıt başarılı, şimdi otomatik olarak giriş yapalım.
                     console.log('[Auth] Kayıt başarılı, otomatik giriş yapılıyor...');
@@ -799,8 +840,15 @@
                 }
             });
 
+            // 💡 YENİ: Otomatik giriş başarılı olduğunda token'ı yenile
+            socket.on('token-refreshed', (newToken) => {
+                console.log('[Auth] Otomatik giriş başarılı, token yenilendi.');
+                localStorage.setItem('aura-auth-token', newToken);
+            });
+
             // --- SUNUCUDAN GELEN OLAYLARI DİNLEME ---
             socket.on('typing', (data) => {
+                updateDiscordPresence(); // 💡 YENİ: Yazma durumu değiştiğinde Discord durumunu güncelle
                 typingIndicator.textContent = data.isTyping ? `${data.nickname} yazıyor...` : '';
             });
 
@@ -835,14 +883,19 @@
                     updateTotalBadgeCount();
 
                     // Tarayıcı bildirimi göster
-                    // 💡 YENİ: Özel hoş geldin mesajı gibi bildirim
-                    const notificationTitle = data.channel.startsWith('dm_') ? `Yeni Mesaj: ${data.nickname}` : `Yeni Mesaj: #${document.querySelector(`.channel-item[data-id="${data.channel}"] span`)?.textContent || 'Sohbet'}`;
-                    const notificationBody = data.type === 'file' ? 'Bir dosya gönderdi' : data.message.replace(/<[^>]*>?/gm, '');
-
-
                     if (Notification.permission === "granted") {
-                        new Notification(`Yeni DM: ${data.nickname}`, {
-                            body: data.message.replace(/<[^>]*>?/gm, ''), // HTML etiketlerini temizle
+                        let notificationTitle;
+                        let notificationBody;
+
+                        if (data.channel.startsWith('dm_')) {
+                            notificationTitle = `Yeni Mesaj: ${data.nickname}`;
+                            notificationBody = data.type === 'file' ? `Dosya: ${data.fileName}` : data.message.replace(/<[^>]*>?/gm, ''); // HTML etiketlerini temizle
+                        } else {
+                            notificationTitle = `Yeni Mesaj: #${document.querySelector(`.channel-item[data-id="${data.channel}"] span`)?.textContent || 'Sohbet'}`;
+                            notificationBody = data.type === 'file' ? `Dosya: ${data.fileName}` : data.message.replace(/<[^>]*>?/gm, '');
+                        }
+                        new Notification(notificationTitle, {
+                            body: notificationBody,
                             icon: data.avatarUrl
                         });
                     }
@@ -932,17 +985,26 @@
                 myAvatar.src = data.avatarUrl; 
                 myNickname.textContent = data.nickname;
 
+                // 💡 YENİ: "Beni Hatırla" seçiliyse, gelen token'ı kaydet
+                updateDiscordPresence(); // 💡 YENİ: Giriş başarılı olduğunda Discord durumunu güncelle
+                if (data.authToken) {
+                    console.log('[Auth] Yeni auto-login token kaydedildi.');
+                    localStorage.setItem('aura-auth-token', data.authToken);
+                }
+
                 // 💡 YENİ: Başlangıç durumunu ayarla
                 myStatusDot.className = 'status-online';
                 myStatusDot.id = 'my-status-dot';
 
                 messages.innerHTML = `<p class="system-msg">Hoş geldin ${data.nickname}, ana kanala katıldın.</p>`;
+                updateDiscordPresence(); // 💡 YENİ: Giriş başarılı olduğunda Discord durumunu güncelle
             });
 
             socket.on('initial data loaded', () => {
                 appScreen.style.display = 'flex'; // Uygulama ekranını göster
                 messageInput.disabled = false;
                 sendButton.disabled = false;
+                switchChatChannel('ana-sohbet-kanali'); // 💡 DÜZELTME: Kanallar yüklendikten sonra varsayılan kanalı seç
             });
 
             socket.on('connect_error', (error) => {
@@ -955,6 +1017,7 @@
 
             // Kullanıcı Listesini Güncelleme
             socket.on('user list', (onlineUsers) => {
+                updateDiscordPresence(); // 💡 YENİ: Kullanıcı listesi değiştiğinde Discord durumunu güncelle
                 userList.innerHTML = '';
                 userListOffline.innerHTML = '';
                 
@@ -964,6 +1027,7 @@
                 // Sesli kanallardaki kullanıcı listelerini temizle
                 document.querySelectorAll('.voice-user-list').forEach(list => list.innerHTML = '');
 
+                // Çevrimiçi kullanıcı yoksa mesaj göster
                 if (online.length === 0) {
                     const emptyMessage = document.createElement('li');
                     emptyMessage.className = 'user-list-item';
@@ -972,24 +1036,6 @@
                     emptyMessage.textContent = 'Kimse çevrimiçi değil.';
                     userList.appendChild(emptyMessage);
                 }
-
-                // 💡 YENİ: Sesli kanaldaki kullanıcılar için kart oluşturma
-                onlineUsers.forEach(user => {
-                    const status = user.status || {};
-                    if (status.channel) {
-                        const listContainer = document.querySelector(`.voice-user-list[data-channel-id="${status.channel}"]`);
-                        if (listContainer) {
-                            const userCard = createVoiceUserCard(user, status);
-                            // 💡 YENİ: Uzaktan ses ayarı için sağ tık menüsü
-                            userCard.addEventListener('contextmenu', (e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                openVoiceUserContextMenu(e, user.uid);
-                            });
-                            listContainer.appendChild(userCard);
-                        }
-                    }
-                });
 
                 if (onlineUsers && onlineUsers.length > 0) {
                     onlineUsers.forEach(user => {
@@ -1001,23 +1047,23 @@
                             const channelId = status.channel;
                             const listContainer = document.querySelector(`.voice-user-list[data-channel-id="${channelId}"]`);
 
+                            // 💡 DÜZELTME: Kullanıcı kartı oluşturma fonksiyonunu çağır
                             if (listContainer) {
-                                const userCard = document.createElement('div');
-                                userCard.className = 'voice-user-container';
-                                if (status.speaking && !status.muted) userCard.classList.add('speaking-user');
-                                if (status.muted) userCard.classList.add('muted');
-                                if (status.deafened) userCard.classList.add('deafened');
-
-                                let statusIcons = '';
-                                if (status.muted) statusIcons += '<span class="muted-icon">🎤</span>';
-                                if (status.deafened) statusIcons += '<span class="deafened-icon">🔕</span>';
-
-                                userCard.innerHTML = `
-                                    <img class="voice-user-avatar" src="${user.avatarUrl}" alt="${user.nickname}">
-                                    <div class="voice-user-name">${user.nickname}</div>
-                                    <div class="voice-user-icons">${statusIcons}</div>
-                                `;
+                                const userCard = createVoiceUserCard(user, status);
+                                userCard.dataset.uid = user.uid; // Context menü için UID ekle
+                                // Uzaktan ses ayarı için sağ tık menüsü
+                                userCard.addEventListener('contextmenu', (e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    openVoiceUserContextMenu(e, user.uid); // user.uid yerine userCard.dataset.uid kullan
+                                });
                                 listContainer.appendChild(userCard);
+                            } else {
+                                // Eğer kanal listesi henüz yüklenmediyse veya bulunamadıysa uyarı ver
+                                // Bu durum, kanal listesi yüklenmeden önce kullanıcı listesi gelirse oluşabilir.
+                                // Normalde 'initial data loaded' sonrası bu sorun yaşanmamalı.
+                                console.warn(`Ses kanalı ${channelId} için liste konteyneri bulunamadı.`);
+
                             }
                         }
                         
@@ -1026,9 +1072,15 @@
                             li.dataset.uid = user.uid;
                             li.dataset.nickname = user.nickname;
                             li.className = 'user-list-item';
+                            let roleTag = '';
+                            if (user.role) {
+                                const roleClass = `role-${user.role.toLowerCase()}`;
+                                roleTag = `<span class="user-role-tag ${roleClass}">${user.role}</span>`;
+                            }
                             li.innerHTML = `
                                 <img src="${user.avatarUrl}" alt="${user.nickname}" class="user-list-avatar" onerror="this.onerror=null;this.src='https://i.pravatar.cc/150?img=6';"> 
                                 <span class="user-list-name">${user.nickname}</span>
+                                ${roleTag} <!-- Rol etiketini buraya ekle -->
                                 <span class="user-status-dot status-${user.status.presence || 'online'}"></span>
                             `;
                             userList.appendChild(li); 
@@ -1037,9 +1089,15 @@
                             li.dataset.uid = user.uid;
                             li.dataset.nickname = user.nickname;
                             li.className = 'user-list-item offline';
+                            let roleTag = '';
+                            if (user.role) {
+                                const roleClass = `role-${user.role.toLowerCase()}`;
+                                roleTag = `<span class="user-role-tag ${roleClass}">${user.role}</span>`;
+                            }
                             li.innerHTML = `
                                 <img src="${user.avatarUrl}" alt="${user.nickname}" class="user-list-avatar" onerror="this.onerror=null;this.src='https://i.pravatar.cc/150?img=6';"> 
                                 <span class="user-list-name">${user.nickname}</span>
+                                ${roleTag} <!-- Rol etiketini buraya ekle -->
                                 <span class="user-status-dot status-offline"></span>
                             `;
                             userListOffline.appendChild(li); 
@@ -1051,6 +1109,7 @@
             });
 
             socket.on('channel-list', (channels) => {
+                updateDiscordPresence(); // 💡 YENİ: Kanal listesi değiştiğinde Discord durumunu güncelle
                 channels.forEach(channel => addChannelToDOM(channel));
             });
 
@@ -1058,6 +1117,7 @@
                 addChannelToDOM(channel);
                 // Yeni oluşturulan metin kanalına otomatik geç
                 if (channel.type === 'text') { switchChatChannel(channel.id); }
+                updateDiscordPresence(); // 💡 YENİ: Kanal oluşturulduğunda Discord durumunu güncelle
             });
 
             socket.on('channel-deleted', (channelId) => {
@@ -1077,7 +1137,7 @@
             });
 
             socket.on('dm history', (dmChannelIds) => {
-                dmChannelIds.forEach(channelId => {
+                dmChannelIds.forEach(channelInfo => { // 💡 DÜZELTME: Artık channelInfo objesi geliyor
                     const uids = channelId.replace('dm_', '').split('_');
                     const otherUserUid = uids.find(uid => uid !== myUid);
                     const otherUser = userCache.get(otherUserUid);
@@ -1089,6 +1149,24 @@
                 });
             });
         }
+
+        // 💡 YENİ: Kimlik doğrulama verilerini gönderen yardımcı fonksiyon
+        function triggerAuthentication() {
+            console.log('[Socket.IO] Sunucuya başarıyla bağlandı! Kimlik doğrulanıyor...');
+            const email = emailInput.value.trim();
+            const password = passwordInput.value;
+            const nickname = nicknameInput.value.trim();
+            const rememberMe = document.getElementById('remember-me-checkbox').checked; // 💡 YENİ
+            const authData = { 
+                email, password, 
+                rememberMe // 💡 YENİ: Sunucuya "Beni Hatırla" isteğini gönder
+            };
+            if (authMode === 'register') { authData.nickname = nickname; }
+
+            const eventName = authMode === 'register' ? 'register' : 'login';
+            socket.emit(eventName, authData);
+        }
+
         
         // --- PROFİL AYARLARI MANTIĞI ---
         function openSettings() {
@@ -1106,10 +1184,10 @@
 
         // --- DİĞER KANAL VE SES FONKSİYONLARI ---
         function switchChatChannel(newChannelId) {
-            if (currentChatChannel === newChannelId) return;
-
-            currentChatChannel = newChannelId;
-            
+            // 💡 DÜZELTME: Geçmiş mesajları istemeden önce kanalın gerçekten değişip değişmediğini kontrol et.
+            // Ancak bu kontrol, mevcut kanalı güncelledikten *sonra* yapılmalı ki ilk yükleme çalışsın.
+            if (currentChatChannel === newChannelId && messages.innerHTML !== '') return;
+            currentChatChannel = newChannelId;            
             document.querySelectorAll('#channels .channel-item').forEach(el => el.classList.remove('active-channel'));
             const newChannelElement = document.querySelector(`.channel-item[data-id="${newChannelId}"]`);
             if (newChannelElement) { 
@@ -1117,6 +1195,7 @@
                 newChannelElement.classList.remove('new-message-highlight'); // Vurguyu kaldır
             } 
 
+            updateDiscordPresence(); // 💡 YENİ: Kanal değiştiğinde Discord durumunu güncelle
             // 💡 YENİ: Kanala girince okunmamış sayacını sıfırla
             if (unreadCounts[newChannelId]) {
                 unreadCounts[newChannelId] = 0;
@@ -1145,6 +1224,7 @@
                 if (currentVoiceChannel) { 
                     leaveCurrentVoiceChannel();
                 }
+                updateDiscordPresence(); // 💡 YENİ: Sesli kanala katıldığında Discord durumunu güncelle
                 currentVoiceChannel = channelId;
                 joinVoiceChannel(channelId);
             }
@@ -1153,11 +1233,30 @@
         // --- SAYFA YÜKLENDİĞİNDE ÇALIŞACAK KODLAR ---
         document.addEventListener('DOMContentLoaded', () => { 
             // Başlangıçta doğrudan giriş ekranını göster
-            loginScreen.style.display = 'flex';
-
-            switchChatChannel('ana-sohbet-kanali'); // Uygulama başladığında varsayılan kanalı seç
+            const authToken = localStorage.getItem('aura-auth-token');
+            if (authToken) {
+                console.log('[Auth] Kayıtlı token bulundu, otomatik giriş deneniyor...');
+                // Token varsa, giriş ekranını göstermeden doğrudan bağlanmayı dene
+                authenticate();
+            } else {
+                // Token yoksa, giriş ekranını göster
+                loginScreen.style.display = 'flex';
+            }
 
             // Mesaj gönderme formu olay dinleyicisi
+            // 💡 YENİ: Bildirim izni iste
+            requestNotificationPermission();
+
+            // 💡 YENİ: Bildirim izni isteme fonksiyonu
+            function requestNotificationPermission() {
+                if (!("Notification" in window)) {
+                    console.warn("Bu tarayıcı bildirimleri desteklemiyor.");
+                    return;
+                }
+                if (Notification.permission === "default") {
+                    Notification.requestPermission().then(permission => { console.log(`Bildirim izni: ${permission}`); });
+                }
+            }
             messageForm.addEventListener('submit', (e) => {
                 e.preventDefault();
                 const messageText = messageInput.value.trim();
@@ -1192,7 +1291,17 @@
 
             // Avatar değiştirme butonu
             document.getElementById('change-avatar-btn').addEventListener('click', () => {
-                settingAvatarFileInput.click();
+                document.getElementById('setting-avatar-file-input').click(); // 💡 DÜZELTME: Doğru ID'yi kullan
+            });
+
+            // 💡 YENİ: Avatar dosyası seçildiğinde önizlemeyi güncelle
+            document.getElementById('setting-avatar-file-input').addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => { document.getElementById('setting-avatar-preview').src = event.target.result; };
+                    reader.readAsDataURL(file);
+                }
             });
 
             // 💡 DÜZELTME: Ses ayarları artık anında değil, "Kaydet" butonuyla (veya şimdilik otomatik) kaydedilecek.
@@ -1280,12 +1389,12 @@
                     if (emoji) {
                         socket.emit('message reaction', { messageId, emoji: emoji.trim() });
                     }
-                } else if (e.target.classList.contains('reply-btn')) {
+                } else if (e.target.closest('.reply-btn')) {
                     startReplying(messageId);
                 } else if (e.target.closest('.reaction-bubble')) {
                     const bubble = e.target.closest('.reaction-bubble');
                     socket.emit('message reaction', { messageId: bubble.dataset.messageId, emoji: bubble.dataset.emoji });
-                } else if (e.target.classList.contains('delete-btn')) {
+                } else if (e.target.closest('.delete-btn')) {
                     if (confirm('Bu mesajı silmek istediğinizden emin misiniz?')) {
                         socket.emit('delete message', messageId);
                     }
@@ -1296,30 +1405,40 @@
                     if (newText && newText.trim() !== currentText) {
                         socket.emit('edit message', { messageId, newMessage: newText });
                     }
+                } else if (e.target.closest('.edit-btn')) {
+                    toggleEditMode(messageId, true);
+                } else if (e.target.closest('.cancel-edit-btn')) {
+                    toggleEditMode(messageId, false);
+                } else if (e.target.closest('.save-edit-btn')) {
+                    const newText = messageElement.querySelector('.edit-message-textarea').value;
+                    socket.emit('edit message', { messageId, newMessage: newText });
                 } else if (e.target.closest('.reply-block')) {
                     const originalMessageId = e.target.closest('.reply-block').dataset.originalMessageId;
                     document.getElementById(`message-${originalMessageId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
             });
 
-            // Durum menüsünü aç/kapat
-            profileInfo.addEventListener('click', (e) => {
-                e.stopPropagation();
-                statusMenu.style.display = 'block';
-                const rect = profileInfo.getBoundingClientRect();
-                statusMenu.style.left = `${rect.left}px`;
-                statusMenu.style.bottom = `${window.innerHeight - rect.top}px`;
-            });
-
-            // Durum seçimi
-            statusMenu.addEventListener('click', (e) => {
+            // 💡 YENİ: Ayarlar menüsündeki durum seçimi
+            document.getElementById('status-settings').addEventListener('click', (e) => {
                 const target = e.target.closest('.context-menu-item');
                 if (target && target.dataset.status) {
                     const newStatus = target.dataset.status;
                     socket.emit('set status', newStatus);
                     myStatusDot.className = `status-${newStatus}`; // Anında görsel geri bildirim
                     myStatusDot.id = 'my-status-dot';
+
+                    // Aktif durumu görsel olarak ayarla
+                    document.querySelectorAll('.status-option-item').forEach(item => item.classList.remove('active'));
+                    target.classList.add('active');
                 }
+            });
+
+            // 💡 YENİ: Ayarlar menüsü açıldığında mevcut durumu seçili hale getir
+            document.getElementById('settings-btn').addEventListener('click', () => {
+                const currentStatus = myStatusDot.className.replace('status-', '');
+                document.querySelectorAll('.status-option-item').forEach(item => {
+                    item.classList.toggle('active', item.dataset.status === currentStatus);
+                });
             });
 
             // Yanıtı iptal etme
@@ -1342,7 +1461,7 @@
                 logout();
             });
 
-            document.addEventListener('click', () => { userContextMenu.style.display = 'none'; channelContextMenu.style.display = 'none'; statusMenu.style.display = 'none'; });
+            document.addEventListener('click', () => { userContextMenu.style.display = 'none'; channelContextMenu.style.display = 'none'; });
         });
 
         // Kanal ekleme butonları
@@ -1376,7 +1495,7 @@
         async function saveProfileChanges() {
             const newNickname = settingNicknameInput.value.trim();
             let newAvatarUrl = settingAvatarInput.value.trim();
-            const avatarFile = settingAvatarFileInput.files[0];
+            const avatarFile = document.getElementById('setting-avatar-file-input').files[0]; // 💡 DÜZELTME: Doğru input'tan dosyayı al
 
             if (!newNickname) {
                 profileErrorDisplay.textContent = 'Kullanıcı adı boş bırakılamaz.';
@@ -1412,6 +1531,13 @@
             
             // Başarılı güncelleme sonrası modalı kapat
             closeSettings();
+            
+            // 💡 DÜZELTME: Avatarı güncelle
+            updateDiscordPresence(); // 💡 YENİ: Profil güncellendiğinde Discord durumunu güncelle
+            myAvatar.src = newAvatarUrl;
+
+            // 💡 YENİ: Dosya input'unu temizle ki aynı dosya tekrar seçilebilsin
+            document.getElementById('setting-avatar-file-input').value = '';
         }
 
         // --- SES AYARLARI FONKSİYONLARI ---
@@ -1497,7 +1623,7 @@
         }
 
         // 💡 YENİ: Sesli kullanıcı sağ tık menüsünü açan ve yöneten fonksiyon
-        function openVoiceUserContextMenu(event, targetUid) {
+        function openVoiceUserContextMenu(event, targetUid) { // 💡 DÜZELTME: targetUid parametresi eklendi
             const slider = document.getElementById('voice-user-volume-slider');
             slider.value = userVolumes[targetUid] !== undefined ? userVolumes[targetUid] : 1;
             slider.oninput = () => handleRemoteVolumeChange(targetUid, parseFloat(slider.value));
@@ -1551,11 +1677,12 @@
             if (!localStream) return;
             isMuted = !isMuted;
             localStream.getAudioTracks().forEach(track => { track.enabled = !isMuted; });
-            muteBtn.classList.toggle('active-status', isMuted);
-            muteBtn.querySelector('span').textContent = isMuted ? '🔇' : '🎤';
+            muteBtn.classList.toggle('active-status', isMuted); // Buton rengini değiştir
+            muteBtn.querySelector('span').className = isMuted ? 'muted-icon' : 'unmuted-icon'; // 💡 DÜZELTME: Simgeyi sınıf ile değiştir
             if (isMuted && isSpeaking) { socket.emit('toggle speaking', false); } else if (!isMuted && isSpeaking) { socket.emit('toggle speaking', true); }
-            socket.emit('toggle status', { status: 'mute', value: isMuted });
+            socket.emit('toggle status', { status: 'mute', value: isMuted }); // Sunucuya durumu bildir
         }
+
         function toggleDeafen() { 
             isDeafened = !isDeafened;
             if (isDeafened && !isMuted) { toggleMute(); }
@@ -1564,9 +1691,10 @@
                     audioElement.muted = isDeafened; 
                 }
             });
-            deafenBtn.classList.toggle('active-status', isDeafened);
-            deafenBtn.querySelector('span').textContent = isDeafened ? '🔕' : '🎧';
+            deafenBtn.classList.toggle('active-status', isDeafened); // Buton rengini değiştir
+            deafenBtn.querySelector('span').className = isDeafened ? 'deafened-icon' : 'undeafened-icon'; // 💡 DÜZELTME: Simgeyi sınıf ile değiştir
             socket.emit('toggle status', { status: 'deafen', value: isDeafened });
+            updateDiscordPresence(); // 💡 YENİ: Durum değiştiğinde Discord durumunu güncelle
         }
 
         // 💡 YENİ: Uzaktaki kullanıcının ses seviyesini ayarlayan fonksiyon
@@ -1581,6 +1709,7 @@
         }
 
         function leaveCurrentVoiceChannel() {
+            updateDiscordPresence(); // 💡 YENİ: Ses kanalından ayrıldığında Discord durumunu güncelle
             if (currentVoiceChannel) { leaveVoiceChannel(currentVoiceChannel); }
         }
 
@@ -1607,6 +1736,7 @@
             deafenBtn.querySelector('span').textContent = '🎧';
         }
 
+
         const iceConfiguration = { iceServers: [ { urls: 'stun:stun.l.google.com:19302' } ] };
 
         function startVolumeDetection() {
@@ -1626,10 +1756,33 @@
                 const currentVolume = sum / bufferLength;
                 const wasSpeaking = isSpeaking;
                 isSpeaking = currentVolume > SPEAK_THRESHOLD && !isMuted;
+
+                // 💡 YENİ: Kendi avatarımız için konuşma göstergesini güncelle
+                myAvatarContainer.classList.toggle('speaking-user', isSpeaking);
+
+                // Sunucuya konuşma durumunu bildir
                 if (isSpeaking !== wasSpeaking) { socket.emit('toggle speaking', isSpeaking); }
                 if (audioContext) requestAnimationFrame(checkVolume);
             };
             checkVolume();
+        }
+
+        // 💡 YENİ: Ses bağlantı durumunu güncelleyen fonksiyon
+        function updateVoiceConnectionStatus() {
+            const states = Object.values(peerConnections).map(pc => pc.iceConnectionState);
+            const channelElement = document.querySelector(`.channel-item[data-id="${currentVoiceChannel}"]`);
+            const channelName = channelElement ? channelElement.textContent.trim() : 'Ses Kanalı';
+
+            if (states.length === 0) {
+                // Henüz kimse yoksa veya bağlantı kurulmadıysa
+                voiceChannelNameSpan.textContent = `${channelName} - Sese Bağlanıldı`;
+            } else if (states.every(state => state === 'connected' || state === 'completed')) {
+                voiceChannelNameSpan.textContent = `${channelName} - Sese Bağlanıldı`;
+            } else if (states.some(state => state === 'failed' || state === 'disconnected')) {
+                voiceChannelNameSpan.textContent = `${channelName} - Bağlantı Hatası`;
+            } else {
+                voiceChannelNameSpan.textContent = `${channelName} - RTC Bağlanıyor...`;
+            }
         }
 
         function joinVoiceChannel(channelId) {
@@ -1650,9 +1803,9 @@ navigator.mediaDevices.getUserMedia({
         deafenBtn.disabled = false;
         disconnectVoiceBtn.disabled = false;
 
+        // 💡 DÜZELTME: Bağlantı durumunu göster
         voiceControlsBar.style.display = 'flex';
-        const channelElement = document.querySelector(`.channel-item[data-id="${channelId}"]`);
-        voiceChannelNameSpan.textContent = `🔊 ${channelElement ? channelElement.textContent.trim() : channelId}`;
+        updateVoiceConnectionStatus(); // Başlangıçta "Bağlanılıyor" olarak ayarla
 
         socket.emit('join voice channel', channelId); 
         startVolumeDetection();
@@ -1693,6 +1846,12 @@ navigator.mediaDevices.getUserMedia({
             };
             pc.onicecandidate = (event) => { if (event.candidate) { socket.emit('candidate', userId, event.candidate); } };
             
+            // 💡 YENİ: Bağlantı durumunu dinle ve arayüzü güncelle
+            pc.oniceconnectionstatechange = () => {
+                console.log(`[WebRTC] ICE state for ${userId}: ${pc.iceConnectionState}`);
+                updateVoiceConnectionStatus();
+            };
+
             if (isOfferer) { pc.onnegotiationneeded = () => { pc.createOffer().then(offer => pc.setLocalDescription(offer)).then(() => { socket.emit('offer', userId, pc.localDescription); }); }; }
 
             return pc;
@@ -1763,7 +1922,7 @@ navigator.mediaDevices.getUserMedia({
             let messageHtml = data.type === 'file'
                 ? (data.fileType && data.fileType.startsWith('image/'))
                     ? `<a href="${data.fileUrl}" target="_blank"><img src="${data.fileUrl}" class="msg-image-preview" alt="${data.message}"></a>`
-                    : `<a href="${data.fileUrl}" target="_blank" class="file-link" download><span class="file-icon">📄</span><span class="file-name">${data.message}</span></a>`
+                    : `<a href="${data.fileUrl}" target="_blank" class="file-link" download><span class="file-icon">📄</span><span class="file-name">${data.message || data.fileName}</span></a>`
                 : md.renderInline(data.message);
             
             if (data.edited) {
@@ -1775,12 +1934,21 @@ navigator.mediaDevices.getUserMedia({
                 <div class="msg-content"> 
                     ${replyHtml}
                     <div class="msg-meta"><span class="nickname">${data.nickname}</span><span class="timestamp">${new Date(data.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span></div>
-                    <div class="msg-text">${messageHtml}</div>
+                    <div class="msg-text" data-original-text="${data.message}">${messageHtml}</div>
+                    <!-- 💡 YENİ: Düzenleme kutusu -->
+                    <div class="edit-message-container">
+                        <textarea class="edit-message-textarea" rows="3"></textarea>
+                        <div>
+                            <button class="save-edit-btn action-btn" style="color: var(--color-success);">Kaydet</button>
+                            <button class="cancel-edit-btn action-btn">İptal</button>
+                        </div>
+                    </div>
                     <div class="message-reactions"></div>
                 </div>
                 <div class="message-actions">
                     <div class="action-btn add-reaction-btn">🙂</div>
                     <div class="action-btn reply-btn">↩️</div>
+                    <!-- 💡 YENİ: Düzenle ve Sil butonları sadece mesaj sahibine gösterilir -->
                     ${data.senderUid === myUid ? '<div class="action-btn edit-btn">✏️</div><div class="action-btn delete-btn">🗑️</div>' : ''}
                 </div>
             `;
@@ -1796,27 +1964,96 @@ navigator.mediaDevices.getUserMedia({
             });
         }
 
+        // 💡 YENİ: Mesaj düzenleme modunu açıp kapatan fonksiyon
+        function toggleEditMode(messageId, isEditing) {
+            const messageElement = document.getElementById(`message-${messageId}`);
+            if (!messageElement) return;
+
+            const textElement = messageElement.querySelector('.msg-text');
+            const editContainer = messageElement.querySelector('.edit-message-container');
+            const editTextArea = messageElement.querySelector('.edit-message-textarea');
+
+            if (isEditing) {
+                editTextArea.value = textElement.dataset.originalText || ''; // Ham metni al
+                textElement.style.display = 'none';
+                editContainer.style.display = 'flex';
+            } else {
+                textElement.style.display = 'block';
+                editContainer.style.display = 'none';
+            }
+        }
+
         // --- LOGOUT MANTIĞI ---
         function logout() {
             if (socket && socket.connected) {
                 socket.emit('logout'); // Sunucuya logout olayını bildir
                 socket.disconnect();
             }
+            localStorage.removeItem('aura-auth-token'); // 💡 YENİ: "Beni Hatırla" token'ını temizle
             if (localStream) { localStream.getTracks().forEach(track => track.stop()); }
             // Tüm yerel durumları sıfırla
             // UI'ı sıfırla
             appScreen.style.display = 'none';
             loginScreen.style.display = 'flex';
             messageInput.value = ''; 
-            messages.innerHTML = `<p class="system-msg">Uygulama yükleniyor...</p>`;
-            textChannelsList.innerHTML = '<div class="channel-item active-channel" data-type="chat" data-id="ana-sohbet-kanali"># geenel-sohbet</div>';
+            messages.innerHTML = `<p class="system-msg">Uygulama yükleniyor...</p>`; // Mesaj alanını temizle
+            textChannelsList.innerHTML = ''; // 💡 DÜZELTME: Kanal listesini tamamen temizle
             voiceChannelsList.innerHTML = '';
             dmChannelsList.innerHTML = '';
             userList.innerHTML = '';
             passwordInput.value = ''; // Güvenlik için şifre alanını temizle
+            updateDiscordPresence(); // 💡 YENİ: Çıkış yapıldığında Discord durumunu temizle
             errorDisplay.textContent = ''; // Giriş ekranındaki hata mesajını temizle
         }
 
+        // 💡 YENİ: Discord Rich Presence'ı güncelleyen fonksiyon
+        function updateDiscordPresence() {
+            const currentStatus = myStatusDot.className.replace('status-', '');
+            let details = 'AuraChat Uygulamasında';
+            let state = '';
+            let smallImageKey = currentStatus;
+            let smallImageText = '';
+
+            switch (currentStatus) {
+                case 'online': smallImageText = 'Çevrimiçi'; break;
+                case 'idle': smallImageText = 'Boşta'; break;
+                case 'dnd': smallImageText = 'Rahatsız Etmeyin'; break;
+                case 'invisible': smallImageText = 'Görünmez'; break;
+                default: smallImageText = 'Çevrimdışı'; break;
+            }
+
+            if (currentVoiceChannel) {
+                const voiceChannelElement = document.querySelector(`.channel-item[data-id="${currentVoiceChannel}"]`);
+                const voiceChannelName = voiceChannelElement ? voiceChannelElement.textContent.replace('🔊', '').trim() : 'Bilinmeyen Ses Kanalı';
+                details = `Sesli Sohbet Odasında: ${voiceChannelName}`;
+                state = isMuted ? 'Mikrofon Kapalı' : (isDeafened ? 'Kulaklık Kapalı' : 'Konuşuyor');
+                smallImageKey = isMuted ? 'muted' : (isDeafened ? 'deafened' : 'speaking'); // Özel ikonlar eklenebilir
+                smallImageText = isMuted ? 'Mikrofon Kapalı' : (isDeafened ? 'Kulaklık Kapalı' : 'Konuşuyor');
+            } else if (currentChatChannel.startsWith('dm_')) {
+                const dmChannelElement = document.querySelector(`.channel-item[data-id="${currentChatChannel}"]`);
+                const dmUserName = dmChannelElement ? dmChannelElement.dataset.nickname : 'Bilinmeyen Kullanıcı';
+                details = `Özel Mesajlaşıyor: ${dmUserName}`;
+                state = myNickname.textContent;
+            } else {
+                const chatChannelElement = document.querySelector(`.channel-item[data-id="${currentChatChannel}"]`);
+                const chatChannelName = chatChannelElement ? chatChannelElement.textContent.replace('#', '').trim() : 'Bilinmeyen Kanal';
+                details = `Metin Kanalında: #${chatChannelName}`;
+                state = myNickname.textContent;
+            }
+
+            const activity = {
+                details: details,
+                state: state,
+                startTimestamp: Date.now(), // Uygulama açıldığından beri geçen süre
+                largeImageKey: 'aura_logo', // Discord uygulamanıza yüklemeniz gereken bir görsel
+                largeImageText: 'AuraChat',
+                smallImageKey: smallImageKey, // Durum ikonları için
+                smallImageText: smallImageText,
+                instance: true,
+            };
+
+            ipcRenderer.send('update-rich-presence', activity);
+        }
     </script>
 </body>
 </html>
