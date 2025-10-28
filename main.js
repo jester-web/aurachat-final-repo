@@ -1,146 +1,121 @@
-const { app, BrowserWindow, ipcMain, session, powerMonitor } = require('electron');
+const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
-const { autoUpdater } = require('electron-updater');
-const RPC = require('discord-rpc'); // Discord RPC paketini dahil et
+const { fork } = require('child_process'); // 💡 YENİ: Node.js sunucusunu başlatmak için
+
+// Uygulamanın canlı yeniden yüklemesini geliştirme ortamında etkinleştirir.
+// Bu satırı production'a geçerken kaldırabilir veya yorum satırı yapabilirsiniz.
+try {
+    require('electron-reloader')(module);
+} catch (_) {}
+
+// 💡 YENİ: Sunucu işlemini tutmak için bir değişken
+let serverProcess;
 
 let mainWindow;
 let splashWindow;
 
-// 💡 DEĞİŞTİR: Discord Geliştirici Portalından aldığın Application ID'si
-// Buraya KENDİ Application ID'nizi yapıştırın!
-const CLIENT_ID = '1432555308483481692'; // Örnek ID
-
-const rpc = new RPC.Client({ transport: 'ipc' });
-let rpcInterval; 
-
-// --- RPC DURUM GÜNCELLEME FONKSİYONLARI ---
-// Bu fonksiyonu arayüz (renderer) ipcMain üzerinden çağıracak.
-function updateDiscordPresence(state = 'Uygulama Başlatılıyor...', details = 'Giriş Ekranı', smallImageKey = 'default_icon') { 
-    if (!rpc.user) return; // RPC bağlı değilse çık
-
-    rpc.setActivity({
-        details: details, // Şu anki eylem (Örn: "Ana Ses Odasında")
-        state: state, // Uygulamanın genel durumu (Örn: "Kullanılabilir")
-        startTimestamp: Date.now(), // Uygulamayı ne zaman açtın
-        largeImageKey: 'aurachat_logo', // Yüklediğin ana ikonun adı
-        smallImageKey: smallImageKey, // Küçük durum ikonu
-        instance: false,
-        buttons: [{ label: 'Ekibe Katıl', url: 'https://aurachat-cyvr.onrender.com' }] 
-    }) 
-    .catch(err => console.error('[Discord RPC Error]', err));
-}
-
-// RPC Bağlantı Mantığı
-async function setRpc() {
-    try {
-        await rpc.login({ clientId: CLIENT_ID });
-        console.log('[Discord RPC] Başarıyla bağlandı!'); 
-        updateDiscordPresence('Çevrimiçi', 'Hazır!'); 
-        
-        // Durumu her 15 saniyede bir güncelle
-        if (rpcInterval) clearInterval(rpcInterval);
-        rpcInterval = setInterval(() => {
-            updateDiscordPresence('Çevrimiçi', 'Hazır!');
-        }, 15000); 
-
-    } catch (error) {
-        console.error('[Discord RPC] Bağlanamadı:', error.message);
-    }
+function createSplashWindow() {
+    splashWindow = new BrowserWindow({
+        width: 400,
+        height: 300,
+        transparent: true,
+        frame: false,
+        alwaysOnTop: true,
+        center: true,
+        resizable: false,
+        webPreferences: {
+            nodeIntegration: false,
+            contextIsolation: true,
+        }
+    });
+    splashWindow.loadFile(path.join(__dirname, 'splash.html'));
 }
 
 function createWindow() {
-  // Ana uygulama penceresini oluştur
-  mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 650,
-    icon: path.join(__dirname, 'icon.png'),
-    frame: false, 
-    show: false, // Başlangıçta titremeyi önlemek için gizle
-    webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false // ipcRenderer kullanmak için gerekli
-    }
-  });
+    // Ana uygulama penceresini oluştur.
+    mainWindow = new BrowserWindow({
+        width: 1200,
+        height: 800,
+        minWidth: 940,
+        minHeight: 560,
+        show: false, // Pencereyi başlangıçta gösterme
+        frame: false, // İşletim sisteminin varsayılan çerçevesini kaldır
+        titleBarStyle: 'hidden',
+        backgroundColor: '#111214',
+        webPreferences: {
+            nodeIntegration: true, // `require` gibi Node.js özelliklerini kullanabilmek için
+            contextIsolation: false, // `require`'ı doğrudan renderer'da kullanmak için (güvenlik notlarına dikkat)
+            // preload: path.join(__dirname, 'preload.js') // Güvenliği artırmak için preload script'i kullanmak daha iyidir, şimdilik bu şekilde bırakıyoruz.
+        },
+        icon: path.join(__dirname, 'icon.png') // Uygulama ikonu
+    });
 
-  // Açılış ekranı (splash) penceresini oluştur.
-  splashWindow = new BrowserWindow({
-    width: 400,
-    height: 300,
-    transparent: true,
-    frame: false,
-    alwaysOnTop: true,
-    icon: path.join(__dirname, 'icon.png'),
-  });
-  splashWindow.loadFile('splash.html');
+    // ve uygulamanın index.html'ini yükle.
+    mainWindow.loadFile(path.join(__dirname, 'index.html'));
 
-  // Ana pencere içeriği yüklendiğinde, açılış ekranını kapat ve ana pencereyi göster
-  mainWindow.once('ready-to-show', () => { 
-    setTimeout(() => {
-        splashWindow.destroy();
+    // Ana pencere içeriği tamamen yüklendiğinde ve gösterilmeye hazır olduğunda
+    mainWindow.once('ready-to-show', () => {
+        if (splashWindow) {
+            splashWindow.close();
+        }
         mainWindow.show();
-    }, 500); // Kısa bir bekleme
-  });
-  mainWindow.loadFile('index.html'); 
-  
+    });
+
+    // Pencere kapatıldığında çalışır.
+    mainWindow.on('closed', () => {
+        mainWindow = null;
+    });
 }
 
-// Uygulama hazır olduğunda
-app.whenReady().then(() => {
-  console.log(`[App] Electron uygulaması başlatılıyor... (Sürüm: ${app.getVersion()})`);
-  
-  // 💡 DÜZELTME: RPC'yi pencere oluşturulmadan önce başlatmak daha güvenilirdir.
-  setRpc();
+// Bu metod, Electron başlatıldığında ve tarayıcı pencerelerini
+// oluşturmaya hazır olduğunda çağrılacak.
+app.on('ready', () => {
+    // 💡 YENİ: Sunucuyu ayrı bir işlem olarak başlat
+    console.log('Starting server...');
+    serverProcess = fork(path.join(__dirname, 'server.js'), [], { silent: false });
 
-  // 💡 DÜZELTME: Tüm uygulama geneli ayarlar ve olay dinleyicileri buraya taşındı.
-  // Bu, pencere oluşturulmadan önce yalnızca bir kez çalışmalarını garanti eder.
+    createSplashWindow();
 
-  // Medya erişim izinlerini yönet
-  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback, details) => {
-    if (permission === 'media' && details.mediaTypes?.includes('audio')) {
-      callback(true); // Mikrofon isteğini onayla
-    } else {
-      callback(false); // Diğer tüm istekleri reddet
-    }
-  });
-
-  // Otomatik güncelleme olaylarını dinle
-  autoUpdater.on('update-available', () => {
-    if (mainWindow) mainWindow.webContents.send('update_available');
-  });
-  autoUpdater.on('update-downloaded', () => {
-    if (mainWindow) mainWindow.webContents.send('update_downloaded');
-  });
-
-  // Sistem kapatma olayını dinle
-  powerMonitor.on('shutdown', () => {
-    console.log('Uygulama kapatılıyor...');
-  });
-
-  // Pencere kontrol olaylarını dinle
-  ipcMain.on('minimize-app', () => mainWindow?.minimize());
-  ipcMain.on('maximize-app', () => { 
-    if (mainWindow?.isMaximized()) { mainWindow.unmaximize(); } else { mainWindow?.maximize(); } 
-  });
-  ipcMain.on('close-app', () => mainWindow?.close());
-  ipcMain.on('restart-and-update', () => autoUpdater.quitAndInstall());
-  
-  // RPC durum güncelleme isteğini dinle
-  ipcMain.on('update-rpc-presence', (event, state, details, smallImage) => {
-    updateDiscordPresence(state, details, smallImage);
-  });
-
-  // Tüm ayarlar yapıldıktan sonra ana pencereyi oluştur.
-  createWindow();
-  
-  autoUpdater.checkForUpdatesAndNotify();
-
-  app.on('activate', function () {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
-  });
+    // 💡 YENİ: Sunucudan 'hazırım' mesajını bekle
+    serverProcess.on('message', (message) => {
+        if (message === 'server-ready') {
+            createWindow(); // Sunucu hazır olduğunda ana pencereyi oluştur
+        }
+    });
 });
 
-app.on('window-all-closed', function () {
-    if (process.platform !== 'darwin') app.quit();
-    if (rpcInterval) clearInterval(rpcInterval);
-    if (rpc.user) rpc.destroy();
+// Tüm pencereler kapatıldığında uygulamadan çık.
+app.on('window-all-closed', () => {
+    // macOS'te kullanıcı Cmd + Q ile çıkana kadar uygulamaların
+    // ve menü çubuğunun aktif kalması yaygındır.
+    if (process.platform !== 'darwin') {
+        // 💡 YENİ: Uygulama kapanırken sunucu işlemini de sonlandır
+        if (serverProcess) {
+            serverProcess.kill();
+        }
+        app.quit();
+    }
+});
+
+app.on('activate', () => {
+    // macOS'te dock'taki ikona tıklandığında ve başka pencere
+    // açık olmadığında yeni bir pencere oluşturmak yaygındır.
+    if (BrowserWindow.getAllWindows().length === 0) {
+        createWindow();
+    }
+});
+
+// --- IPC (Renderer Process ile İletişim) ---
+
+// Kapatma, küçültme ve büyütme butonları için olay dinleyicileri
+ipcMain.on('minimize-app', () => {
+    mainWindow.minimize();
+});
+
+ipcMain.on('maximize-app', () => {
+    mainWindow.isMaximized() ? mainWindow.unmaximize() : mainWindow.maximize();
+});
+
+ipcMain.on('close-app', () => {
+    mainWindow.close();
 });
