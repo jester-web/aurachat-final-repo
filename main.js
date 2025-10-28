@@ -101,6 +101,11 @@ function createWindow() {
   ipcMain.on('restart-and-update', () => {
     autoUpdater.quitAndInstall();
   });
+
+  // 💡 YENİ: Arayüzden gelen okunmamış mesaj sayısını dinle ve tepsi ikonuna yansıt.
+  ipcMain.on('update-badge', (event, count) => {
+    app.setBadgeCount(count);
+  });
 }
 
 app.whenReady().then(() => {
