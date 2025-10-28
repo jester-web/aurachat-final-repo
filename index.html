@@ -105,33 +105,14 @@
         #toggle-auth-btn:hover { color: #a482f7; }
         .login-options {
             display: flex;
-            justify-content: space-between;
+            justify-content: flex-start; /* Sadece beni hatırla kalsın */
             align-items: center;
             margin-top: 15px;
             font-size: 0.9em;
         }
 
         /* UYGULAMA EKRANI */
-        #app-screen { display: none; width: 100%; height: 100%; flex-direction: row; flex-grow: 1; } 
-        /* 💡 YENİ: Sunucu Çubuğu */
-        #server-bar {
-            width: 72px;
-            background-color: var(--bg-dark);
-            padding: 8px 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 8px;
-        }
-        .server-icon {
-            width: 48px; height: 48px;
-            background-color: var(--bg-medium);
-            color: white;
-            border-radius: 50%;
-            display: flex; justify-content: center; align-items: center;
-            cursor: pointer; font-weight: bold; transition: border-radius 0.2s, background-color 0.2s;
-        }
-        .server-icon:hover, .server-icon.active { border-radius: 16px; background-color: var(--color-link); }
+        #app-screen { display: none; width: 100%; height: 100%; flex-direction: row; flex-grow: 1; }
         #channels { width: 240px; background-color: var(--bg-medium); display: flex; flex-direction: column; border-right: 1px solid var(--border-color); } 
         .channels-list { flex-grow: 1; padding: 10px 8px; overflow-y: auto; }
         .channels-list h4 { 
@@ -159,6 +140,15 @@
         .channel-item.new-message-highlight::before {
             content: '●'; color: var(--color-link); font-size: 1.2em; line-height: 0;
         }
+        /* 💡 YENİ: DM listesi için ek stiller */
+        .dm-channel-item {
+            flex-direction: column;
+            align-items: flex-start;
+            padding: 8px 10px;
+        }
+        .dm-channel-item .channel-name { display: flex; align-items: center; gap: 8px; font-weight: 500; color: #96989d; }
+        .dm-channel-item .last-message { font-size: 0.8em; color: #72767d; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; margin-top: 4px; }
+
         
         /* KANAL ALTINDAKİ ÜYE KARTLARI */ 
         .voice-user-list { padding-left: 15px; margin-top: 5px; }
@@ -564,6 +554,8 @@
         .profile-modal-details {
             margin-top: 20px;
             padding-top: 20px;
+            padding-left: 5px; /* İçeriği biraz sağa kaydır */
+            padding-right: 5px;
             border-top: 1px solid var(--border-color);
             display: flex; flex-direction: column; gap: 10px;
         }
@@ -571,6 +563,7 @@
         .profile-modal-details .role-list { display: flex; gap: 8px; }
         .profile-modal-details .email-info { font-size: 0.9em; color: var(--color-text); }
         #profile-modal-dm-btn {
+            display: none; /* Başlangıçta gizli, kendimiz değilsek gösterilecek */
             width: 100%; padding: 10px; margin-top: 20px;
             background-color: var(--color-link); color: white;
             border: none; border-radius: 5px; cursor: pointer; font-weight: bold;
@@ -594,53 +587,25 @@
             <img src="./icon.png" alt="AuraChat Icon" class="login-app-icon">
             <h2 id="auth-title">Giriş Yap</h2>
             <form id="auth-form" onsubmit="authenticate(event)">
-                <input type="text" id="server-url-input" placeholder="Sunucu Adresi" value="https://aurachat-final-repo.onrender.com" style="display:none;">
-                <input type="text" id="server-url-input" placeholder="Sunucu Adresi" value="http://localhost:3000" style="display:none;">
+                <!-- <input type="text" id="server-url-input" placeholder="Sunucu Adresi" value="https://aurachat-final-repo.onrender.com" style="display:none;"> -->
+                <input type="text" id="server-url-input" placeholder="Sunucu Adresi" value="http://localhost:3000" style="display:none;"> 
                 <div id="nickname-input-container">
                     <input type="text" id="nickname-input" placeholder="Kullanıcı Adı">
                 </div>
                 <input type="email" id="email-input" placeholder="E-posta" required>
                 <input type="password" id="password-input" placeholder="Şifre" required>
-                <div class="login-options">
-                    <label for="remember-me"><input type="checkbox" id="remember-me"> Beni Hatırla</label>
-                    <!-- <a href="#">Şifremi Unuttum?</a> -->
-                </div>
                 <button type="submit" id="auth-main-btn">Giriş Yap</button>
             </form>
             <p id="login-error"></p>
             <button id="toggle-auth-btn" onclick="toggleAuthMode(event)">Hesabın yok mu? Kayıt Ol</button>
         </div>
     </div>
-
-    <!-- 💡 YENİ: Sunucu Seçim/Oluşturma Modalı -->
-    <div id="server-select-modal" class="modal-overlay" style="display: none;">
-        <div class="login-box" style="width: 440px;">
-            <h2>Sunucuya Katıl</h2>
-            <p style="color: #b9bbbe; margin-top: -15px; margin-bottom: 20px;">Bir davet kodu girerek mevcut bir sunucuya katıl veya kendin oluştur.</p>
-            <div id="join-server-form">
-                <input type="text" id="invite-code-input" placeholder="Davet Kodu">
-                <button id="join-server-btn" class="modal-action-btn">Sunucuya Katıl</button>
-            </div>
-            <div style="display: flex; align-items: center; gap: 15px; margin: 20px 0;">
-                <hr style="flex-grow: 1; border-color: #444;">
-                <span style="color: #8a929b;">VEYA</span>
-                <hr style="flex-grow: 1; border-color: #444;">
-            </div>
-            <div id="create-server-form">
-                <input type="text" id="new-server-name-input" placeholder="Sunucu Adı">
-                <button id="create-server-btn" class="modal-action-btn" style="background-color: var(--color-success);">Yeni Sunucu Oluştur</button>
-            </div>
-            <p id="server-modal-error" style="color: var(--color-danger); margin-top: 15px; min-height: 20px;"></p>
-        </div>
-    </div>
-
-
-
+    <!-- 💡 KALDIRILDI: Sunucu seçim modalı artık kullanılmıyor. -->
     <div id="app-screen">
         
         <div id="channels">
             <div id="server-header"> 
-                <span>AuraChat</span>
+                <span>Ekip Sohbeti</span>
                 <button id="admin-panel-shortcut-btn" title="Yönetim Paneli">🛡️</button>
             </div>
             <div class="channels-list">
@@ -810,7 +775,6 @@
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <!-- Markdown desteği için markdown-it kütüphanesini ekliyoruz -->
     <script src="https://cdn.jsdelivr.net/npm/markdown-it@14.1.0/dist/markdown-it.min.js"></script>
-    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <script>
         let socket;
 
@@ -891,7 +855,7 @@
         let replyingToMessageId = null;
         // --- AUTH MANTIĞI ---
         const searchInput = document.getElementById('search-input');
-        const serverSelectModal = document.getElementById('server-select-modal');
+        
         function toggleAuthMode(event) {
             if (event) event.preventDefault();
             authMode = authMode === 'login' ? 'register' : 'login';
@@ -919,7 +883,6 @@
             const email = emailInput.value.trim();
             const password = passwordInput.value;
             const nickname = nicknameInput.value.trim();
-            const rememberMe = document.getElementById('remember-me').checked;
 
             if (!email || !password) {
                 errorDisplay.textContent = 'E-posta ve şifre alanları zorunludur.';
@@ -1102,21 +1065,20 @@
 
             socket.on('login success', (data) => {
                 console.log('[Auth] Giriş başarılı:', data.nickname);
-                loginScreen.style.display = 'none';
-                serverSelectModal.style.display = 'flex'; // 💡 YENİ: Sunucu seçim ekranını göster
+                // 💡 DEĞİŞİKLİK: Sunucu seçim ekranı yerine doğrudan uygulamayı aç.
+                loginScreen.style.display = 'none'; 
+                appScreen.style.display = 'flex';
+
                 myUid = data.uid; // Kendi UID'mizi sakla
-                
                 myAvatar.src = data.avatarUrl; 
                 myNickname.textContent = data.nickname;
                 myRole = data.role; // Rolümüzü sakla
 
-                // 💡 YENİ: Kullanıcının sunucularını sol bara ekle
-                updateServerList(data.servers);
-
+                // 💡 DEĞİŞİKLİK: Başlangıç verilerini (kanallar, kullanıcılar) istemek için sunucuya sinyal gönder.
+                socket.emit('request initial data');
             });
 
             socket.on('initial data loaded', () => {
-                appScreen.style.display = 'flex'; // Uygulama ekranını göster
                 messageInput.disabled = false;
                 sendButton.disabled = false;
             });
@@ -1127,18 +1089,6 @@
                 authMainBtn.disabled = false;
                 authMainBtn.textContent = authMode === 'login' ? 'Giriş Yap' : 'Kayıt Ol';
                 if (socket) socket.disconnect();
-            });
-
-            // 💡 YENİ: Sunucu oluşturma ve katılma olayları
-            socket.on('server_created', (newServer) => {
-                addServerToServerList(newServer);
-                socket.emit('join_server', newServer.id); // Otomatik olarak yeni sunucuya katıl
-                serverSelectModal.style.display = 'none';
-            });
-            socket.on('server_joined', (joinedServer) => {
-                addServerToServerList(joinedServer);
-                socket.emit('join_server', joinedServer.id); // Otomatik olarak yeni sunucuya katıl
-                serverSelectModal.style.display = 'none';
             });
 
             // Kullanıcı Listesini Güncelleme
@@ -1256,15 +1206,14 @@
                 }
             });
 
-            socket.on('dm history', (dmChannelIds) => {
-                dmChannelIds.forEach(channelId => {
-                    const uids = channelId.replace('dm_', '').split('_');
-                    const otherUserUid = uids.find(uid => uid !== myUid);
+            // 💡 YENİ: Gelişmiş DM geçmişi işleyici
+            socket.on('dm history', (conversations) => {
+                dmChannelsList.innerHTML = ''; // Listeyi temizle
+                conversations.forEach(convo => {
+                    const otherUserUid = convo.participants.find(uid => uid !== myUid);
                     const otherUser = userCache.get(otherUserUid);
                     if (otherUser) {
-                        ensureDmChannelExists(otherUser.uid, otherUser.nickname);
-                    } else {
-                        console.warn(`DM geçmişindeki ${otherUserUid} kullanıcısı cache'de bulunamadı.`);
+                        addOrUpdateDmChannel(convo.id, otherUser.nickname, convo.lastMessage);
                     }
                 });
             });
@@ -1424,22 +1373,6 @@
                 document.querySelector('.settings-category-btn[data-pane="admin-settings"]').click(); 
             });
 
-            // 💡 YENİ: Sunucu seçim modalı butonları
-            document.getElementById('create-server-btn').addEventListener('click', () => {
-                const serverName = document.getElementById('new-server-name-input').value.trim();
-                if (serverName) {
-                    socket.emit('create_server', serverName);
-                } else {
-                    document.getElementById('server-modal-error').textContent = 'Lütfen bir sunucu adı girin.';
-                }
-            });
-            document.getElementById('join-server-btn').addEventListener('click', () => {
-                const inviteCode = document.getElementById('invite-code-input').value.trim();
-                if (inviteCode) {
-                    socket.emit('join_server_with_code', inviteCode);
-                }
-            });
-
             // Event Delegation: Dinamik olarak eklenen elementler için tıklama olaylarını yönet
             const usersOnlineContainer = document.getElementById('users-online');
             usersOnlineContainer.addEventListener('click', (e) => {
@@ -1575,11 +1508,6 @@
                 }
             });
 
-            // Yanıtı iptal etme
-            document.getElementById('cancel-reply-btn').addEventListener('click', () => {
-                cancelReplying();
-            });
-
             document.addEventListener('click', () => { userContextMenu.style.display = 'none'; channelContextMenu.style.display = 'none'; statusMenu.style.display = 'none'; });
         });
 
@@ -1657,31 +1585,6 @@
             closeSettings();
         }
 
-        // 💡 YENİ: Sunucu listesini güncelleyen ve olayları bağlayan fonksiyon
-        function updateServerList(servers) {
-            const serverBar = document.getElementById('server-bar');
-            serverBar.innerHTML = ''; // Önce temizle
-            servers.forEach(server => addServerToServerList(server));
-
-            // Sunucu ekleme ve katılma butonlarını da ekle
-            const addServerIcon = document.createElement('div');
-            addServerIcon.className = 'server-icon';
-            addServerIcon.textContent = '+';
-            addServerIcon.title = 'Sunucu Ekle veya Oluştur';
-            addServerIcon.onclick = () => serverSelectModal.style.display = 'flex';
-            serverBar.appendChild(addServerIcon);
-        }
-
-        // 💡 YENİ: Tek bir sunucuyu listeye ekleyen fonksiyon
-        function addServerToServerList(server) {
-            const serverIcon = document.createElement('div');
-            serverIcon.className = 'server-icon';
-            serverIcon.textContent = server.name.substring(0, 2).toUpperCase(); // Şimdilik ismin ilk 2 harfi
-            serverIcon.dataset.serverId = server.id;
-            serverIcon.onclick = () => socket.emit('join_server', server.id);
-            document.getElementById('server-bar').prepend(serverIcon); // Yeni sunucuları başa ekle
-        }
-
         // --- SES AYARLARI FONKSİYONLARI ---
         async function populateAudioDevices() {
             const devices = await navigator.mediaDevices.enumerateDevices();
@@ -1743,7 +1646,20 @@
                 const item = document.createElement('div');
                 item.className = 'admin-user-item';
 
-                const canChangeRole = user.role !== 'Kurucu';
+                // 💡 YENİ: Dinamik yetki kontrolü. myRole global değişkendir.
+                // Kurucu, kendisinden düşük seviyedeki herkesi yönetebilir.
+                // Admin, kendisinden düşük seviyedeki (sadece Üye) herkesi yönetebilir.
+                let canManage = false;
+                const myLevel = myRole === 'Kurucu' ? 3 : (myRole === 'Admin' ? 2 : 1);
+                const userLevel = user.role === 'Kurucu' ? 3 : (user.role === 'Admin' ? 2 : 1);
+
+                if (myLevel > userLevel) {
+                   canManage = true;
+                } else if (myRole === 'Admin' && user.role === 'Üye') {
+                    // Bu eski kontrol, yukarıdaki level kontrolü ile zaten sağlanıyor ama
+                    // daha açık olması için bırakılabilir veya kaldırılabilir.
+                    canManage = true;
+                }
 
                 const banButtonText = user.banned ? 'Yasağı Kaldır' : 'Yasakla';
                 const banButtonClass = user.banned ? 'unban-btn' : 'ban-btn';
@@ -1754,13 +1670,13 @@
                         <span>${user.nickname}</span>
                     </div>
                     <div class="admin-actions">
-                        <select class="admin-user-role-select" data-uid="${user.uid}" ${canChangeRole ? '' : 'disabled'}>
+                        <select class="admin-user-role-select" data-uid="${user.uid}" ${canManage ? '' : 'disabled'}>
                             <option value="Üye" ${user.role === 'Üye' ? 'selected' : ''}>Üye</option>
                             <option value="Admin" ${user.role === 'Admin' ? 'selected' : ''}>Admin</option>
                             ${user.role === 'Kurucu' ? '<option value="Kurucu" selected>Kurucu</option>' : ''}
                         </select>
-                        <button class="kick-btn" data-uid="${user.uid}" ${canChangeRole ? '' : 'disabled'}>At</button>
-                        <button class="${banButtonClass}" data-uid="${user.uid}" ${canChangeRole ? '' : 'disabled'}>${banButtonText}</button>
+                        <button class="kick-btn" data-uid="${user.uid}" ${canManage ? '' : 'disabled'}>At</button>
+                        <button class="${banButtonClass}" data-uid="${user.uid}" ${canManage ? '' : 'disabled'}>${banButtonText}</button>
                     </div>
                 `;
                 container.appendChild(item);
@@ -1802,16 +1718,23 @@
             const dmChannelId = `dm_${uids[0]}_${uids[1]}`;
 
             // Eğer DM kanalı soldaki listede yoksa oluştur
-            if (!document.querySelector(`.channel-item[data-id="${dmChannelId}"]`)) {
-                const dmItem = document.createElement('div');
-                dmItem.className = 'channel-item';
-                dmItem.dataset.id = dmChannelId;
-                dmItem.dataset.type = 'chat';
-                dmItem.dataset.nickname = targetNickname; // Header'da kullanmak için
-                dmItem.textContent = `@ ${targetNickname}`;
-                dmChannelsList.appendChild(dmItem);
-            }
+            addOrUpdateDmChannel(dmChannelId, targetNickname, "Mesaj gönder...");
             return dmChannelId;
+        }
+
+        // 💡 YENİ: DM kanalını listeye ekleyen veya güncelleyen fonksiyon
+        function addOrUpdateDmChannel(channelId, nickname, lastMessage) {
+            let dmItem = document.querySelector(`.channel-item[data-id="${channelId}"]`);
+            if (!dmItem) {
+                dmItem = document.createElement('div');
+                dmItem.className = 'channel-item dm-channel-item'; // Yeni stil sınıfı
+                dmItem.dataset.id = channelId;
+                dmItem.dataset.type = 'chat';
+                dmItem.dataset.nickname = nickname;
+                dmChannelsList.prepend(dmItem); // Yeni konuşmaları en üste ekle
+            }
+            // İçeriği her zaman güncelle (son mesaj değişmiş olabilir)
+            dmItem.innerHTML = `<div class="channel-name">@ ${nickname}</div><div class="last-message">${lastMessage}</div>`;
         }
         
         function addChannelToDOM(channel) {
@@ -2141,8 +2064,4 @@
         }
     </script>
 </body>
-<script>
-
-</script>
-
 </html>
