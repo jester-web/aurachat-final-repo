@@ -12,9 +12,7 @@ const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*", methods: ["GET", "POST"] } });
 
 const PORT = 3000;
-const TEAM_ID = 'tek_ekip_sunucusu';
-const MAIN_CHANNEL = 'ana-sohbet-kanali'; 
-const VOICE_CHANNEL_ID = 'ana-ses-odasi'; 
+const DEFAULT_CHANNEL_NAME = 'genel';
 
 // Dosya yükleme dizinleri
 const uploadsDir = path.join(__dirname, 'uploads');
@@ -99,26 +97,6 @@ try {
     process.exit(1);
 }
 
-// 💡 YENİ: Sunucu başlangıcında varsayılan kanalların varlığını kontrol et
-async function ensureDefaultChannels() {
-    const textChannelRef = db.collection('channels').doc(MAIN_CHANNEL);
-    const voiceChannelRef = db.collection('channels').doc(VOICE_CHANNEL_ID);
-
-    const textDoc = await textChannelRef.get();
-    if (!textDoc.exists) {
-        console.log(`[SUNUCU] Varsayılan metin kanalı '${MAIN_CHANNEL}' bulunamadı, oluşturuluyor...`);
-        await textChannelRef.set({ name: 'genel-sohbet', type: 'text' });
-    }
-    const voiceDoc = await voiceChannelRef.get();
-    if (!voiceDoc.exists) {
-        console.log(`[SUNUCU] Varsayılan ses kanalı '${VOICE_CHANNEL_ID}' bulunamadı, oluşturuluyor...`);
-        await voiceChannelRef.set({ name: 'Sohbet Odası', type: 'voice' });
-    }
-}
-
-// Sunucu başladığında bu fonksiyonu çağır
-ensureDefaultChannels();
-
 const md = markdownit(); // Markdown parser'ı başlat
 
 const onlineUsers = {};
@@ -133,12 +111,15 @@ async function getAllUsers() {
     allUsersSnapshot.forEach(doc => {
         const userData = doc.data();
         const isOnline = Object.values(onlineUsers).some(onlineUser => onlineUser.uid === userData.uid);
+        // 💡 DÜZELTME: Kullanıcı çevrimdışıysa socketId null olmalı.
         const socketId = isOnline ? Object.keys(onlineUsers).find(sid => onlineUsers[sid].uid === userData.uid) : null;
 
         allUsers.push({
             uid: userData.uid,
             nickname: userData.nickname,
             avatarUrl: userData.avatarUrl,
+            banned: userData.banned || false, // 💡 YENİ: Yasaklanma durumunu ekle
+            role: userData.role || 'Üye',
             isOnline: isOnline,
             status: isOnline ? (userStatus[socketId] || {}) : {}
         });
@@ -162,11 +143,19 @@ io.on('connection', (socket) => {
           });
 
           const randomAvatar = AVATAR_URLS[Math.floor(Math.random() * AVATAR_URLS.length)];
+          
+          const usersCollection = db.collection('users');
+          const userCountSnapshot = await usersCollection.count().get();
+          const userCount = userCountSnapshot.data().count;
+          const userRole = userCount === 0 ? 'Kurucu' : 'Üye';
+
+          // 💡 YENİ: Kullanıcının ait olduğu sunucuları takip etmek için boş bir dizi ekle.
           await db.collection('users').doc(userRecord.uid).set({
               nickname,
               avatarUrl: randomAvatar,
               email: email.toLowerCase(),
-              uid: userRecord.uid
+              uid: userRecord.uid,
+              role: userRole // Rolü kaydet
           });
 
           console.log(`[SUNUCU] Yeni kayıt (Firebase): ${nickname}`);
@@ -180,38 +169,49 @@ io.on('connection', (socket) => {
       }
   });
 
-  socket.on('login', async ({ email, password }) => {
+  socket.on('login', async ({ email, password, rememberMe }) => {
       try {
-          const userQuery = await db.collection('users').where('email', '==', email.toLowerCase()).limit(1).get();
-          if (userQuery.empty) {
-               socket.emit('auth error', 'E-posta veya şifre hatalı.');
-               return;
-          }
-          const userData = userQuery.docs[0].data();
-          const uid = userQuery.docs[0].id;
-          
-          onlineUsers[socket.id] = { nickname: userData.nickname, avatarUrl: userData.avatarUrl, email: userData.email, socketId: socket.id, uid: uid };
-          userStatus[socket.id] = { presence: 'online', muted: false, deafened: false, speaking: false, channel: null }; // 💡 YENİ: Varsayılan durum 'online'
-          
-          socket.join(TEAM_ID); 
+        // 💡 DÜZELTME: Firebase Auth ile şifre doğrulaması yapılıyor.
+        // Bu, doğrudan veritabanı sorgusu yapmaktan çok daha güvenlidir.
+        // Not: Bu yöntemin çalışması için Firebase projenizde "Authentication" > "Sign-in method" > "Email/Password" aktif olmalıdır.
+        const userRecord = await auth.getUserByEmail(email.toLowerCase());
+        const uid = userRecord.uid;
 
-          // 💡 YENİ: Kullanıcı katıldı mesajı gönder
-          io.to(TEAM_ID).emit('system message', { message: `${userData.nickname} sohbete katıldı.` });
+        // Şifre kontrolü için Firebase Auth REST API'sini kullanıyoruz.
+        // Bu, Admin SDK'nın doğrudan şifre doğrulama yeteneği olmadığı için bir çözümdür.
+        // Bu API anahtarını Firebase projenizin ayarlarından alabilirsiniz.
+        // ÖNEMLİ: Bu anahtarı normalde bir ortam değişkeninde saklamak daha güvenlidir.
+        const apiKey = process.env.FIREBASE_WEB_API_KEY; // Bu ortam değişkenini ayarlamanız gerekecek.
+        if (!apiKey) throw new Error('Firebase Web API Anahtarı ayarlanmamış.');
 
-          // 💡 DÜZELTME: İstemcinin UID'yi alabilmesi için login success olayına uid eklendi.
-          socket.emit('login success', { nickname: userData.nickname, avatarUrl: userData.avatarUrl, uid: uid });
-          
-          console.log(`[SUNUCU] Giriş başarılı: ${userData.nickname}`);
+        const response = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password, returnSecureToken: true })
+        });
 
-          // 💡 DÜZELTME: Tüm başlangıç verilerinin gönderilmesi beklenip ardından 'initial data loaded' olayı tetikleniyor.
-          // Bu, istemcinin yükleme ekranında takılı kalmasını engeller.
-          await Promise.all([
-              sendChannelList(socket),
-              sendPastMessages(socket, MAIN_CHANNEL),
-              sendDmHistory(socket, uid),
-              getAllUsers().then(users => io.to(TEAM_ID).emit('user list', users))
-          ]);
-          socket.emit('initial data loaded');
+        if (!response.ok) {
+            throw new Error('E-posta veya şifre hatalı.');
+        }
+
+        const userDoc = await db.collection('users').doc(uid).get();
+        if (!userDoc.exists) throw new Error('Kullanıcı veritabanında bulunamadı.');
+        const userData = userDoc.data();
+
+        // 💡 YENİ: Kullanıcı yasaklı mı diye kontrol et.
+        if (userData.banned) {
+            socket.emit('auth error', 'Bu hesaba erişim engellenmiştir.');
+            return;
+        }
+
+        onlineUsers[socket.id] = { nickname: userData.nickname, avatarUrl: userData.avatarUrl, email: userData.email, socketId: socket.id, uid: uid, role: userData.role || 'Üye' };
+        userStatus[socket.id] = { presence: 'online', muted: false, deafened: false, speaking: false, channel: null };
+        
+        // 💡 YENİ: Kullanıcının ait olduğu sunucuları getir.
+        const userServers = await getUserServers(uid);
+
+        socket.emit('login success', { nickname: userData.nickname, avatarUrl: userData.avatarUrl, uid: uid, role: userData.role || 'Üye', servers: userServers });
+        console.log(`[SUNUCU] Giriş başarılı: ${userData.nickname}`);
 
       } catch (err) {
           // Firebase kimlik doğrulama hatası (örneğin, yanlış şifre)
@@ -219,6 +219,101 @@ io.on('connection', (socket) => {
           socket.emit('auth error', 'E-posta veya şifre hatalı.');
       }
   });
+
+    // 💡 YENİ: Sunucu oluşturma
+    socket.on('create_server', async (serverName) => {
+        const user = onlineUsers[socket.id];
+        if (!user) return;
+
+        try {
+            const inviteCode = generateInviteCode();
+            const serverRef = db.collection('servers').doc();
+            const serverId = serverRef.id;
+
+            // Varsayılan kanalları oluştur
+            const textChannelRef = db.collection('channels').doc();
+            const voiceChannelRef = db.collection('channels').doc();
+
+            const batch = db.batch();
+            batch.set(serverRef, {
+                name: serverName,
+                ownerId: user.uid,
+                inviteCode: inviteCode,
+                members: [user.uid] // Kurucu üyeyi ekle
+            });
+            batch.set(textChannelRef, { name: DEFAULT_CHANNEL_NAME, type: 'text', serverId: serverId });
+            batch.set(voiceChannelRef, { name: 'Sohbet Odası', type: 'voice', serverId: serverId });
+            
+            // Kullanıcının sunucu listesini güncelle
+            const userRef = db.collection('users').doc(user.uid);
+            batch.update(userRef, { servers: admin.firestore.FieldValue.arrayUnion(serverId) });
+
+            await batch.commit();
+
+            const newServerData = { id: serverId, name: serverName, icon: null }; // icon gelecekte eklenebilir
+            socket.emit('server_created', newServerData);
+            console.log(`[SUNUCU] ${user.nickname} yeni bir sunucu oluşturdu: ${serverName}`);
+        } catch (error) {
+            console.error("Sunucu oluşturma hatası:", error);
+            socket.emit('system error', 'Sunucu oluşturulurken bir hata oluştu.');
+        }
+    });
+
+    // 💡 YENİ: Davet koduyla sunucuya katılma
+    socket.on('join_server_with_code', async (inviteCode) => {
+        const user = onlineUsers[socket.id];
+        if (!user) return;
+
+        try {
+            const serversQuery = await db.collection('servers').where('inviteCode', '==', inviteCode).limit(1).get();
+            if (serversQuery.empty) {
+                return socket.emit('system error', 'Geçersiz davet kodu.');
+            }
+
+            const serverDoc = serversQuery.docs[0];
+            const serverId = serverDoc.id;
+            const serverData = serverDoc.data();
+
+            if (serverData.members && serverData.members.includes(user.uid)) {
+                return socket.emit('system error', 'Bu sunucuya zaten üyesiniz.');
+            }
+
+            const batch = db.batch();
+            batch.update(serverDoc.ref, { members: admin.firestore.FieldValue.arrayUnion(user.uid) });
+            batch.update(db.collection('users').doc(user.uid), { servers: admin.firestore.FieldValue.arrayUnion(serverId) });
+            await batch.commit();
+
+            const joinedServerData = { id: serverId, name: serverData.name, icon: null };
+            socket.emit('server_joined', joinedServerData);
+            io.to(serverId).emit('system message', { message: `${user.nickname} sunucuya katıldı.` });
+            console.log(`[SUNUCU] ${user.nickname} bir sunucuya katıldı: ${serverData.name}`);
+        } catch (error) {
+            console.error("Sunucuya katılma hatası:", error);
+            socket.emit('system error', 'Sunucuya katılırken bir hata oluştu.');
+        }
+    });
+
+    // 💡 YENİ: Bir sunucuya giriş yapma ve verilerini isteme
+    socket.on('join_server', async (serverId) => {
+        const user = onlineUsers[socket.id];
+        if (!user) return;
+
+        // Önceki sunucu odasından ayrıl
+        if (socket.currentServerId) {
+            socket.leave(socket.currentServerId);
+        }
+
+        socket.join(serverId);
+        socket.currentServerId = serverId;
+        console.log(`[SUNUCU] ${user.nickname}, ${serverId} sunucusuna giriş yaptı.`);
+
+        // Sunucuya ait kanalları ve geçmiş mesajları gönder
+        await Promise.all([
+            sendChannelList(socket, serverId),
+            getAllUsers().then(users => io.to(serverId).emit('user list', users)) // Sunucudaki herkese kullanıcı listesini gönder
+        ]);
+        socket.emit('initial data loaded'); // Arayüzün gösterilmesini tetikle
+    });
 
   // ------------------------------------
   // PROFİL GÜNCELLEME
@@ -233,8 +328,9 @@ io.on('connection', (socket) => {
         const currentData = userDoc.data();
         
         const updateData = {
-            nickname: newNickname || currentData.nickname,
-            avatarUrl: newAvatarUrl || currentData.avatarUrl
+            nickname: newNickname || currentData.nickname, 
+            avatarUrl: newAvatarUrl || currentData.avatarUrl,
+            // Rol güncelleme mantığı buraya eklenebilir (örn: sadece adminler için)
         };
         await userRef.update(updateData);
 
@@ -244,9 +340,9 @@ io.on('connection', (socket) => {
         // Firebase Auth tarafını da güncelle
         await auth.updateUser(user.uid, { displayName: updateData.nickname, photoURL: updateData.avatarUrl });
         
-        socket.emit('profile update success', { nickname: user.nickname, avatarUrl: user.avatarUrl });
+        socket.emit('profile update success', { nickname: user.nickname, avatarUrl: user.avatarUrl, role: user.role });
         // Profil güncellendiğinde tüm kullanıcılara listeyi tekrar gönder
-        getAllUsers().then(users => io.to(TEAM_ID).emit('user list', users));
+        if (socket.currentServerId) getAllUsers().then(users => io.to(socket.currentServerId).emit('user list', users));
 
     } catch(err) {
         console.error('Profil güncelleme hatası:', err.message);
@@ -263,7 +359,40 @@ io.on('connection', (socket) => {
     const validStatuses = ['online', 'idle', 'dnd', 'invisible'];
     if (validStatuses.includes(newStatus)) {
         userStatus[socket.id].presence = newStatus;
-        getAllUsers().then(users => io.to(TEAM_ID).emit('user list', users));
+        if (socket.currentServerId) getAllUsers().then(users => io.to(socket.currentServerId).emit('user list', users));
+    }
+  });
+
+  // 💡 YENİ: Yönetici rol değiştirme
+  socket.on('admin:change-role', async ({ targetUid, newRole }) => {
+    const requester = onlineUsers[socket.id];
+    if (!requester || !['Kurucu', 'Admin'].includes(requester.role)) {
+      socket.emit('system error', 'Bu işlemi yapma yetkiniz yok.');
+      return;
+    }
+
+    const validRoles = ['Admin', 'Üye']; // Değiştirilebilecek roller
+    if (!validRoles.includes(newRole)) {
+      socket.emit('system error', 'Geçersiz rol ataması.');
+      return;
+    }
+
+    try {
+      const targetUserRef = db.collection('users').doc(targetUid);
+      const targetUserDoc = await targetUserRef.get();
+
+      if (!targetUserDoc.exists) return;
+
+      // Kurucunun rolü değiştirilemez.
+      if (targetUserDoc.data().role === 'Kurucu') {
+        socket.emit('system error', 'Kurucunun rolü değiştirilemez.');
+        return;
+      }
+
+      await targetUserRef.update({ role: newRole });
+      getAllUsers().then(users => io.to(TEAM_ID).emit('user list', users));
+    } catch (error) {
+      console.error('Rol değiştirme hatası:', error);
     }
   });
 
@@ -298,7 +427,7 @@ io.on('connection', (socket) => {
           reactions[emoji].push(user.uid);
         }
         transaction.update(messageRef, { reactions });
-        io.to(TEAM_ID).emit('reaction update', { messageId, reactions });
+        if (socket.currentServerId) io.to(socket.currentServerId).emit('reaction update', { messageId, reactions });
       });
     } catch (error) {
       console.error('Tepki işlenirken hata:', error);
@@ -315,7 +444,7 @@ io.on('connection', (socket) => {
       const doc = await messageRef.get();
       if (doc.exists && doc.data().senderUid === user.uid) {
         await messageRef.delete();
-        io.to(TEAM_ID).emit('message deleted', { messageId });
+        if (socket.currentServerId) io.to(socket.currentServerId).emit('message deleted', { messageId });
       } else {
         // Yetkisiz silme denemesi
         socket.emit('system error', 'Bu mesajı silme yetkiniz yok.');
@@ -336,7 +465,7 @@ io.on('connection', (socket) => {
       if (doc.exists && doc.data().senderUid === user.uid) {
         const sanitizedMessage = md.renderInline(newMessage);
         await messageRef.update({ message: sanitizedMessage, edited: true });
-        io.to(TEAM_ID).emit('message edited', { messageId, newMessage: sanitizedMessage });
+        if (socket.currentServerId) io.to(socket.currentServerId).emit('message edited', { messageId, newMessage: sanitizedMessage });
       }
     } catch (error) {
       console.error('Mesaj düzenlenirken hata:', error);
@@ -351,10 +480,11 @@ io.on('connection', (socket) => {
       // Geçersiz istek, belki bir hata mesajı gönderilebilir.
       return;
     }
+    // 💡 YENİ: Kanal oluştururken sunucu ID'sini de kaydet.
     try {
-      const docRef = await db.collection('channels').add({ name, type });
+      const docRef = await db.collection('channels').add({ name, type, serverId: socket.currentServerId });
       const newChannel = { id: docRef.id, name, type };
-      io.to(TEAM_ID).emit('channel-created', newChannel);
+      io.to(socket.currentServerId).emit('channel-created', newChannel);
     } catch (error) {
       console.error('Kanal oluşturma hatası:', error);
     }
@@ -363,7 +493,7 @@ io.on('connection', (socket) => {
   socket.on('delete-channel', async (channelId) => {
     try {
       await db.collection('channels').doc(channelId).delete();
-      io.to(TEAM_ID).emit('channel-deleted', channelId);
+      io.to(socket.currentServerId).emit('channel-deleted', channelId);
     } catch (error) {
       console.error('Kanal silme hatası:', error);
     }
@@ -441,7 +571,7 @@ io.on('connection', (socket) => {
           }
       } else {
           // Bu bir genel kanal mesajı
-          io.to(TEAM_ID).emit('chat message', finalMessage);
+          io.to(socket.currentServerId).emit('chat message', finalMessage);
       }
   });
 
@@ -450,13 +580,14 @@ io.on('connection', (socket) => {
     if (!user) return;
 
     userStatus[socket.id].channel = channelId;
-    socket.join(channelId);
-    socket.to(channelId).emit('user joined', socket.id);
+    const voiceRoomId = `${socket.currentServerId}-${channelId}`;
+    socket.join(voiceRoomId);
+    socket.to(voiceRoomId).emit('user joined', socket.id);
     console.log(`[SUNUCU] ${user.nickname} (${socket.id}) ses kanalına katıldı: ${channelId}`);
 
     // Kanaldaki diğer kullanıcıları yeni katılan kullanıcıya gönder
-    const usersInChannel = Object.values(onlineUsers).filter(u => userStatus[u.socketId] && userStatus[u.socketId].channel === channelId && u.socketId !== socket.id);
-    socket.emit('ready to talk', usersInChannel.map(u => u.socketId));
+    const usersInChannel = Object.values(onlineUsers).filter(u => userStatus[u.socketId]?.channel === channelId && u.socketId !== socket.id);
+    socket.emit('ready to talk', usersInChannel.map(u => u.socketId)); 
 
     getAllUsers().then(users => io.to(TEAM_ID).emit('user list', users)); // Kullanıcı listesini güncelle
   });
@@ -467,11 +598,12 @@ io.on('connection', (socket) => {
 
     userStatus[socket.id].channel = null;
     userStatus[socket.id].speaking = false; // Kanaldan ayrılınca konuşma durumunu sıfırla
-    socket.leave(channelId);
+    const voiceRoomId = `${socket.currentServerId}-${channelId}`;
+    socket.leave(voiceRoomId);
     console.log(`[SUNUCU] ${user.nickname} (${socket.id}) ses kanalından ayrıldı: ${channelId}`);
-    socket.to(channelId).emit('user left', socket.id);
+    socket.to(voiceRoomId).emit('user left', socket.id);
 
-    getAllUsers().then(users => io.to(TEAM_ID).emit('user list', users)); // Kullanıcı listesini güncelle
+    if (socket.currentServerId) getAllUsers().then(users => io.to(socket.currentServerId).emit('user list', users));
   });
 
   socket.on('toggle status', (data) => {
@@ -479,23 +611,22 @@ io.on('connection', (socket) => {
     if (!user) return;
     console.log(`[SUNUCU] ${user.nickname} (${socket.id}) durumu değişti: ${data.status} = ${data.value}`);
     userStatus[socket.id][data.status] = data.value;
-    getAllUsers().then(users => io.to(TEAM_ID).emit('user list', users)); // Kullanıcı listesini güncelle
+    if (socket.currentServerId) getAllUsers().then(users => io.to(socket.currentServerId).emit('user list', users));
   });
 
   socket.on('toggle speaking', (isSpeaking) => { 
     const user = onlineUsers[socket.id];
     if (!user) return;
     console.log(`[SUNUCU] ${user.nickname} (${socket.id}) konuşma durumu: ${isSpeaking}`);
-    userStatus[socket.id].speaking = isSpeaking; 
-    getAllUsers().then(users => io.to(TEAM_ID).emit('user list', users));
+    userStatus[socket.id].speaking = isSpeaking;
+    if (socket.currentServerId) getAllUsers().then(users => io.to(socket.currentServerId).emit('user list', users));
   });
   
   socket.on('typing', (isTyping) => {
     const user = onlineUsers[socket.id];
     if (!user) return;
-    // console.log(`[SUNUCU] ${user.nickname} (${socket.id}) yazıyor: ${isTyping}`);
-    // Sadece mevcut sohbet kanalındaki diğer kullanıcılara gönder
-    socket.to(TEAM_ID).emit('typing', { nickname: user.nickname, isTyping });
+    // 💡 DÜZELTME: Sadece mevcut sunucudaki diğer kullanıcılara gönder
+    if (socket.currentServerId) socket.to(socket.currentServerId).emit('typing', { nickname: user.nickname, isTyping });
   });
 
   // WebRTC Sinyalleşmesi
@@ -521,20 +652,13 @@ io.on('connection', (socket) => {
   function handleDisconnect(socketId) {
     console.log(`[SUNUCU] Kullanıcı bağlantısı kesildi: ${socketId}`);
     const user = onlineUsers[socketId];
-    if (!user) return;
-
-    // 💡 YENİ: Kullanıcı ayrıldı mesajı gönder
-    io.to(TEAM_ID).emit('system message', { message: `${user.nickname} sohbetten ayrıldı.` });
-    
-    // Eğer sesli kanaldaysa, kanaldan ayrıldığını bildir
-    if (userStatus[socketId].channel) {
-      io.to(userStatus[socketId].channel).emit('user left', socketId);
+    if (user) {
+      io.to(socket.currentServerId).emit('system message', { message: `${user.nickname} sohbetten ayrıldı.` });
+      if (userStatus[socketId]?.channel) { io.to(`${socket.currentServerId}-${userStatus[socketId].channel}`).emit('user left', socketId); }
+      delete onlineUsers[socketId];
+      delete userStatus[socketId];
+      if (socket.currentServerId) getAllUsers().then(users => io.to(socket.currentServerId).emit('user list', users));
     }
-
-    delete onlineUsers[socketId]; 
-    delete userStatus[socketId]; 
-    
-    getAllUsers().then(users => io.to(TEAM_ID).emit('user list', users));
   }
 });
 
@@ -564,14 +688,13 @@ async function sendPastMessages(socket, channelId) {
 }
 
 // Tüm kanalları veritabanından çekip gönderen fonksiyon
-async function sendChannelList(socket) {
+async function sendChannelList(socket, serverId) {
     try {
-        const channelsSnapshot = await db.collection('channels').get();
+        const channelsSnapshot = await db.collection('channels').where('serverId', '==', serverId).get();
         const channels = [];
         channelsSnapshot.forEach(doc => {
             channels.push({ id: doc.id, ...doc.data() });
         });
-        // İstemciye sadece istek atan kullanıcıya gönder
         socket.emit('channel-list', channels);
     } catch (error) {
         console.error('Kanal listesi çekerken hata:', error);
@@ -605,3 +728,28 @@ async function sendDmHistory(socket, userId) {
     console.error('DM geçmişi çekerken hata:', error);
   }
 }
+
+// 💡 YENİ: Kullanıcının üye olduğu sunucuları getiren fonksiyon
+async function getUserServers(userId) {
+    try {
+        const userDoc = await db.collection('users').doc(userId).get();
+        if (!userDoc.exists || !userDoc.data().servers) {
+            return [];
+        }
+        const serverIds = userDoc.data().servers;
+        if (serverIds.length === 0) return [];
+
+        const serversQuery = await db.collection('servers').where(admin.firestore.FieldPath.documentId(), 'in', serverIds).get();
+        const servers = [];
+        serversQuery.forEach(doc => {
+            servers.push({ id: doc.id, name: doc.data().name, icon: null }); // icon gelecekte eklenebilir
+        });
+        return servers;
+    } catch (error) {
+        console.error("Kullanıcı sunucuları çekilirken hata:", error);
+        return [];
+    }
+}
+
+// 💡 YENİ: Benzersiz davet kodu üreten fonksiyon
+const generateInviteCode = () => Math.random().toString(36).substring(2, 8).toUpperCase();
