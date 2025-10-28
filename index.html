@@ -1538,12 +1538,17 @@
 
     })
     .catch(err => {
-        // HATA DURUMU
-        console.error('Mikrofon Erişim Hatası (CODE):', err.name, err.message);
-        
-        // Kullanıcıya Windows'ta izinleri kontrol etmesini öneren bir mesaj göster
-        alert(`Mikrofon erişimi reddedildi veya cihaz bulunamadı.\n\nLütfen şunları kontrol edin:\n1. Başka bir uygulamanın (Discord, Zoom) açık olmadığından.\n2. Windows/MacOS Gizlilik Ayarlarında Mikrofon izninin açık olduğundan.`);
-        
+        // 💡 DÜZELTME: Hata türüne göre daha spesifik ve yol gösterici mesajlar.
+        console.error('Mikrofon Erişim Hatası:', err.name, err.message);
+
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+            alert('Mikrofon İzni Reddedildi!\n\nSesli sohbeti kullanabilmek için işletim sisteminizin gizlilik ayarlarından AuraChat için mikrofon erişimine izin vermeniz gerekmektedir.\n\n- Windows: Ayarlar > Gizlilik > Mikrofon\n- macOS: Sistem Ayarları > Gizlilik ve Güvenlik > Mikrofon');
+        } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+            alert('Mikrofon Bulunamadı!\n\nLütfen bilgisayarınıza bir mikrofonun bağlı olduğundan ve düzgün çalıştığından emin olun.');
+        } else {
+            alert(`Beklenmedik bir mikrofon hatası oluştu: ${err.name}\n\nLütfen mikrofonunuzun başka bir uygulama (Discord, Zoom vb.) tarafından kullanılmadığından emin olun ve uygulamayı yeniden başlatmayı deneyin.`);
+        }
+
         leaveVoiceChannel(channelId); // Hata durumunda UI'ı temizle
     });
 }
