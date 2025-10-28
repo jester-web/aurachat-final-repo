@@ -17,19 +17,6 @@
             --border-color: #2D2E31;
             --color-online: #43B581;
         }
-        /* 💡 YENİ: Açık Tema Renkleri */
-        body[data-theme="light"] {
-            --bg-dark: #ffffff;
-            --bg-medium: #f2f3f5;
-            --bg-light: #e3e5e8;
-            --color-text: #2e3338;
-            --color-link: #007BFF;
-            --color-success: #28a745;
-            --color-danger: #dc3545;
-            --border-color: #d1d5da;
-            --color-online: #28a745;
-        }
-
 
         /* Başlık Çubuğu (Title Bar) */
         #title-bar {
@@ -103,17 +90,10 @@
         #login-error { color: var(--color-danger); margin-top: 15px; min-height: 20px; font-weight: 500; }
         #toggle-auth-btn { background: none; border: none; color: var(--color-link); text-decoration: underline; font-size: 0.9em; margin-top: 20px; cursor: pointer; }
         #toggle-auth-btn:hover { color: #a482f7; }
-        .login-options {
-            display: flex;
-            justify-content: flex-start; /* Sadece beni hatırla kalsın */
-            align-items: center;
-            margin-top: 15px;
-            font-size: 0.9em;
-        }
 
         /* UYGULAMA EKRANI */
         #app-screen { display: none; width: 100%; height: 100%; flex-direction: row; flex-grow: 1; }
-        #channels { width: 240px; background-color: var(--bg-medium); display: flex; flex-direction: column; border-right: 1px solid var(--border-color); } 
+        #channels { width: 240px; background-color: var(--bg-medium); display: flex; flex-direction: column; border-right: 1px solid var(--border-color); }
         .channels-list { flex-grow: 1; padding: 10px 8px; overflow-y: auto; }
         .channels-list h4 { 
             display: flex; justify-content: space-between; align-items: center;
@@ -140,15 +120,6 @@
         .channel-item.new-message-highlight::before {
             content: '●'; color: var(--color-link); font-size: 1.2em; line-height: 0;
         }
-        /* 💡 YENİ: DM listesi için ek stiller */
-        .dm-channel-item {
-            flex-direction: column;
-            align-items: flex-start;
-            padding: 8px 10px;
-        }
-        .dm-channel-item .channel-name { display: flex; align-items: center; gap: 8px; font-weight: 500; color: #96989d; }
-        .dm-channel-item .last-message { font-size: 0.8em; color: #72767d; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; margin-top: 4px; }
-
         
         /* KANAL ALTINDAKİ ÜYE KARTLARI */ 
         .voice-user-list { padding-left: 15px; margin-top: 5px; }
@@ -165,18 +136,7 @@
 
         /* CHAT */
         #chat-main { flex-grow: 1; display: flex; flex-direction: column; background-color: var(--bg-light); border-right: 1px solid var(--border-color); }
-        #chat-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; border-bottom: 1px solid var(--border-color); font-weight: 600; color: white; box-shadow: 0 1px 0 rgba(0,0,0,0.2); }
-        .search-container { position: relative; }
-        #search-input {
-            background-color: var(--bg-dark);
-            border: 1px solid var(--border-color);
-            color: var(--color-text);
-            border-radius: 4px;
-            padding: 4px 8px;
-            width: 180px;
-        }
-        #clear-search-btn { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #8a929b; cursor: pointer; display: none; }
-
+        #chat-header { padding: 12px 20px; border-bottom: 1px solid var(--border-color); font-weight: 600; color: white; box-shadow: 0 1px 0 rgba(0,0,0,0.2); }
         #voice-controls-bar {
             display: none; /* Başlangıçta gizli */
             padding: 8px 20px;
@@ -193,7 +153,7 @@
         .msg-content .nickname { font-weight: 500; color: white; margin-right: 8px; }
         .msg-content .timestamp { font-size: 0.75em; color: #72767d; }
         .msg-content { 
-            position: relative; padding: 8px 12px; border-radius: 12px; background-color: var(--bg-medium);
+            position: relative; padding: 8px 12px; border-radius: 12px;
         }
         .msg-text { color: var(--color-text); word-wrap: break-word; }
         .system-msg { color: #8a929b; text-align: center; margin: 10px 0; font-style: italic; }
@@ -295,10 +255,6 @@
         .status-idle { background-color: #FAA61A; } /* Sarı */
         .status-dnd { background-color: var(--color-danger); } /* Kırmızı */
         .status-invisible, .status-offline { background-color: #747F8D; } /* Gri */
-        /* Rol Renkleri */
-        .role-Kurucu { background-color: #FFD700; color: #333; } /* Altın */
-        .role-Admin { background-color: #F04747; color: white; } /* Kırmızı */
-        .role-Üye { background-color: #7289DA; color: white; } /* Discord Mavisi */
         /* User Context Menu */
         .context-menu {
             display: none;
@@ -313,16 +269,6 @@
         }
         .context-menu-item { padding: 8px 15px; color: #b9bbbe; cursor: pointer; transition: background-color 0.15s; }
         .context-menu-item:hover { background-color: var(--color-link); color: white; }
-
-        /* 💡 YENİ: Sesli Kullanıcı Sağ Tık Menüsü */
-        #voice-user-context-menu { padding: 10px; width: 180px; }
-        #voice-user-context-menu label { font-size: 0.8em; font-weight: bold; color: #8a929b; }
-        #voice-user-volume-slider {
-            width: 100%;
-            margin-top: 8px;
-            cursor: pointer;
-        }
-
 
         /* Kanal başlıklarındaki ekleme butonu */
         .add-channel-btn {
@@ -356,25 +302,17 @@
         .control-btn.active-status { color: var(--color-danger); }
 
         #server-header {
-            padding: 0 15px; height: 48px; display: flex; align-items: center; justify-content: space-between;
+            padding: 0 15px; height: 48px; display: flex; align-items: center;
             font-size: 1em; font-weight: bold; color: white;
             border-bottom: 1px solid var(--border-color);
             box-shadow: 0 1px 0 rgba(0,0,0,0.2);
-        }
-        #admin-panel-shortcut-btn {
-            display: none; /* Sadece adminler için JS ile gösterilecek */
-            background: none; border: none; color: #b9bbbe;
-            font-size: 1.2em; cursor: pointer; padding: 5px; border-radius: 4px;
-            transition: background-color 0.2s, color 0.2s;
-        }
-        #admin-panel-shortcut-btn:hover {
-            background-color: var(--bg-light); color: white;
+            cursor: pointer; transition: background-color 0.15s;
         }
         #server-header:hover { background-color: rgba(255,255,255,0.05); }
     </style>
     <style>
-        .control-btn.muted-icon::before { content: '🎤'; }
-        .control-btn.deafened-icon::before { content: '🎧'; }
+        .control-btn.muted-icon::before { content: '🔇'; }
+        .control-btn.deafened-icon::before { content: '🔕'; }
     </style>
     <style>
         /* Settings Modal */
@@ -475,39 +413,6 @@
         .settings-pane input[type="range"] {
             width: 100%; box-sizing: border-box; padding: 10px; border-radius: 5px; border: 1px solid var(--border-color); background-color: var(--bg-dark); color: var(--color-text); font-size: 1em;
         }
-        /* Yönetim Paneli Stilleri */
-        .admin-user-list { display: flex; flex-direction: column; gap: 10px; max-height: 300px; overflow-y: auto; }
-        .admin-user-item { display: flex; justify-content: space-between; align-items: center; background-color: var(--bg-medium); padding: 8px; border-radius: 5px; }
-        .admin-user-info { display: flex; align-items: center; gap: 10px; }
-        .admin-user-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
-        .admin-actions { display: flex; gap: 8px; }
-        .admin-actions button { padding: 4px 8px; font-size: 0.8em; }
-        .admin-actions .ban-btn { background-color: var(--color-danger); }
-        .admin-actions .unban-btn { background-color: var(--color-success); }
-        .admin-user-role-select { width: 100px; }
-        /* 💡 YENİ: Tema Seçim Stilleri */
-        .theme-options {
-            display: flex;
-            gap: 20px;
-            margin-top: 10px;
-        }
-        .theme-option {
-            cursor: pointer;
-            text-align: center;
-            border: 2px solid transparent;
-            padding: 10px;
-            border-radius: 8px;
-        }
-        .theme-option.active {
-            border-color: var(--color-link);
-        }
-        .theme-preview {
-            width: 120px;
-            height: 80px;
-            border-radius: 5px;
-            margin-bottom: 8px;
-        }
-
         .settings-buttons { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
         .settings-content button { padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; transition: background-color 0.2s; }
         #save-profile-btn { background-color: var(--color-success); color: white; }
@@ -520,55 +425,20 @@
             text-align: center;
             min-height: 18px;
         }
-        /* Kullanıcı Profili Modalı */
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(0,0,0,0.7);
-            display: flex; justify-content: center; align-items: center;
-            z-index: 3000;
+        /* Güncelleme Bildirimi */
+        #update-notification {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: var(--color-link);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            z-index: 4000;
         }
-        .profile-modal-content {
-            background-color: var(--bg-medium);
-            border-radius: 12px; width: 340px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-            border: 1px solid var(--border-color);
-            position: relative;
-            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        .profile-modal-header {
-            height: 80px; background-color: var(--bg-dark);
-            border-radius: 12px 12px 0 0; position: relative;
-        }
-        #profile-modal-avatar {
-            width: 90px; height: 90px; border-radius: 50%;
-            object-fit: cover; border: 4px solid var(--bg-medium);
-            position: absolute; bottom: -45px; left: 20px;
-        }
-        #profile-modal-status-dot { 
-            position: absolute; bottom: -35px; left: 90px;
-            width: 15px; height: 15px; border-radius: 50%;
-            border: 3px solid var(--bg-medium);
-        }
-        .profile-modal-body { padding: 60px 20px 20px 20px; text-align: left; }
-        .profile-modal-body h3 { margin: 0; font-size: 1.5em; color: white; display: flex; align-items: center; gap: 8px; }
-        .profile-modal-details {
-            margin-top: 20px;
-            padding-top: 20px;
-            padding-left: 5px; /* İçeriği biraz sağa kaydır */
-            padding-right: 5px;
-            border-top: 1px solid var(--border-color);
-            display: flex; flex-direction: column; gap: 10px;
-        }
-        .profile-modal-details h4 { font-size: 0.8em; color: #8a929b; text-transform: uppercase; margin: 0; }
-        .profile-modal-details .role-list { display: flex; gap: 8px; }
-        .profile-modal-details .email-info { font-size: 0.9em; color: var(--color-text); }
-        #profile-modal-dm-btn {
-            display: none; /* Başlangıçta gizli, kendimiz değilsek gösterilecek */
-            width: 100%; padding: 10px; margin-top: 20px;
-            background-color: var(--color-link); color: white;
-            border: none; border-radius: 5px; cursor: pointer; font-weight: bold;
-        }
-        .modal-close-btn { position: absolute; top: 10px; right: 10px; background: none; border: none; color: #8a929b; font-size: 1.5em; cursor: pointer; }
+        #update-notification button { margin-left: 15px; padding: 5px 10px; border-radius: 5px; border: none; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -587,8 +457,8 @@
             <img src="./icon.png" alt="AuraChat Icon" class="login-app-icon">
             <h2 id="auth-title">Giriş Yap</h2>
             <form id="auth-form" onsubmit="authenticate(event)">
-                <!-- <input type="text" id="server-url-input" placeholder="Sunucu Adresi" value="https://aurachat-final-repo.onrender.com" style="display:none;"> -->
-                <input type="text" id="server-url-input" placeholder="Sunucu Adresi" value="http://localhost:3000" style="display:none;"> 
+                <input type="text" id="server-url-input" placeholder="Sunucu Adresi" value="https://aurachat-final-repo.onrender.com" style="display:none;">
+                <input type="text" id="server-url-input" placeholder="Sunucu Adresi" value="http://localhost:3000" style="display:none;">
                 <div id="nickname-input-container">
                     <input type="text" id="nickname-input" placeholder="Kullanıcı Adı">
                 </div>
@@ -600,13 +470,12 @@
             <button id="toggle-auth-btn" onclick="toggleAuthMode(event)">Hesabın yok mu? Kayıt Ol</button>
         </div>
     </div>
-    <!-- 💡 KALDIRILDI: Sunucu seçim modalı artık kullanılmıyor. -->
+
     <div id="app-screen">
         
         <div id="channels">
-            <div id="server-header"> 
-                <span>Ekip Sohbeti</span>
-                <button id="admin-panel-shortcut-btn" title="Yönetim Paneli">🛡️</button>
+            <div id="server-header">
+                AuraChat
             </div>
             <div class="channels-list">
                 <h4><span>METİN KANALLARI</span> <button class="add-channel-btn" data-type="text">+</button></h4>
@@ -638,10 +507,7 @@
         </div>
 
         <div id="chat-main">
-            <div id="chat-header">
-                <span id="chat-header-title"># genel-sohbet</span>
-                <div class="search-container"><input type="text" id="search-input" placeholder="Ara..."><button id="clear-search-btn">✕</button></div>
-            </div>
+            <div id="chat-header"># genel-sohbet</div>
             <div id="voice-controls-bar">
                 <span id="voice-channel-name"></span>
                 <div class="voice-actions">
@@ -681,8 +547,6 @@
             <div class="settings-sidebar">
                 <button class="settings-category-btn active" data-pane="profile-settings">Profil Ayarları</button>
                 <button class="settings-category-btn" data-pane="audio-video-settings">Ses & Görüntü</button>
-                <button class="settings-category-btn" data-pane="appearance-settings">Görünüm</button>
-                <button id="admin-panel-btn" class="settings-category-btn" data-pane="admin-settings" style="display: none;">Yönetim Paneli</button>
                 <!-- Gelecekte eklenecek diğer kategoriler buraya gelebilir -->
             </div>
             <div class="settings-main">
@@ -728,41 +592,18 @@
                         <button id="save-audio-settings-btn">Değişiklikleri Kaydet</button>
                     </div>
                 </div>
-                <!-- Görünüm Ayarları Paneli -->
-                <div id="appearance-settings" class="settings-pane">
-                    <h3>Görünüm</h3>
-                    <div class="settings-group"> 
-                        <label>Tema</label>
-                        <div class="theme-options">
-                            <div class="theme-option" data-theme="dark">
-                                <div class="theme-preview" style="background-color: #18191C; border: 1px solid #2D2E31;"></div>
-                                <span>Koyu Tema</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <!-- Yönetim Paneli -->
-                <div id="admin-settings" class="settings-pane">
-                    <h3>Yönetim Paneli</h3>
-                    <div class="admin-sidebar">
-                        <button class="settings-category-btn active" data-admin-pane="user-management">Kullanıcı Yönetimi</button>
-                    </div>
-                    <div id="user-management" class="settings-pane-content active">
-                        <div id="admin-user-list-container" class="admin-user-list"></div>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
+    <div id="update-notification">
+        <span>Yeni bir güncelleme hazır!</span>
+        <button id="restart-app-btn">Yeniden Başlat ve Güncelle</button>
+    </div>
+
     <div id="user-context-menu" class="context-menu">
     </div>
     <div id="channel-context-menu" class="context-menu">
         <div class="context-menu-item" id="delete-channel-btn">Kanalı Sil</div>
-    </div>
-    <!-- 💡 YENİ: Sesli Kullanıcı Sağ Tık Menüsü -->
-    <div id="voice-user-context-menu" class="context-menu">
-        <label for="voice-user-volume-slider">Kullanıcı Sesi</label>
-        <input type="range" id="voice-user-volume-slider" min="0" max="2" step="0.05" value="1">
     </div>
     <!-- socket.io istemci kütüphanesini CDN'den yüklüyoruz -->
     <div id="status-menu" class="context-menu">
@@ -803,7 +644,6 @@
         const myAvatar = document.getElementById('my-avatar');
         const myStatusDot = document.getElementById('my-status-dot');
         const myNickname = document.getElementById('my-nickname');
-        let myRole = 'Üye'; // Varsayılan rol
         const profileInfo = document.getElementById('profile-info');
         const statusMenu = document.getElementById('status-menu');
 
@@ -823,7 +663,6 @@
         const messageForm = document.getElementById('message-form');
         const typingIndicator = document.getElementById('typing-indicator');
         const userContextMenu = document.getElementById('user-context-menu');
-        const voiceUserContextMenu = document.getElementById('voice-user-context-menu');
         const channelContextMenu = document.getElementById('channel-context-menu');
 
         const voiceControlsBar = document.getElementById('voice-controls-bar');
@@ -842,7 +681,6 @@
         let isSpeaking = false;
         const SPEAK_THRESHOLD = 50; 
 
-        let userVolumes = JSON.parse(localStorage.getItem('userVolumes')) || {};
         let authMode = 'login';
         
         // Global user cache
@@ -854,8 +692,6 @@
         
         let replyingToMessageId = null;
         // --- AUTH MANTIĞI ---
-        const searchInput = document.getElementById('search-input');
-        
         function toggleAuthMode(event) {
             if (event) event.preventDefault();
             authMode = authMode === 'login' ? 'register' : 'login';
@@ -900,18 +736,15 @@
             if (socket && socket.connected) { socket.disconnect(); } // Mevcut soket bağlantısını kes
             socket = io(serverUrl);
 
-            // 💡 DÜZELTME: Giriş verilerini de göndererek olay dinleyicilerini başlat.
-            initializeSocketEvents({
-                email, password, nickname,
-                mode: authMode
-            });
+            initializeSocketEvents(); // Soket olay dinleyicilerini başlat
 
         }
         
-        function initializeSocketEvents(loginData) {
+        function initializeSocketEvents() {
             if (!socket) return;
 
             // Bu fonksiyon, soket olaylarını yalnızca bir kez tanımlar.
+            // Her giriş denemesinde tekrar tekrar tanımlanmasını önler.
 
             socket.off(); // Önceki tüm dinleyicileri temizle (güvenlik önlemi)
             console.log('[Socket.IO] Önceki olay dinleyicileri temizlendi.');
@@ -919,19 +752,23 @@
             // --- AUTH OLAYLARI ---
             socket.on('connect', () => {
                 console.log('[Socket.IO] Sunucuya başarıyla bağlandı!');
-                const authData = { email: loginData.email, password: loginData.password };
-                if (loginData.mode === 'register') { 
-                    authData.nickname = loginData.nickname; 
+                const email = emailInput.value.trim();
+                const password = passwordInput.value;
+                const nickname = nicknameInput.value.trim();
+                const authData = { email, password };
+                if (authMode === 'register') { authData.nickname = nickname; }
+
+                if (authMode === 'register') {
                     socket.emit('register', authData);
                 } else {
-                    socket.emit('login', authData); 
+                    socket.emit('login', authData);
                 }
             });
 
             socket.on('auth error', (message) => {
                 errorDisplay.textContent = `Hata: ${message}`;
                 authMainBtn.disabled = false;
-                authMainBtn.textContent = loginData.mode === 'login' ? 'Giriş Yap' : 'Kayıt Ol';
+                authMainBtn.textContent = authMode === 'login' ? 'Giriş Yap' : 'Kayıt Ol';
                 if (socket) socket.disconnect();
             });
 
@@ -939,7 +776,7 @@
                 if (data.type === 'register') {
                     // Kayıt başarılı, şimdi otomatik olarak giriş yapalım.
                     console.log('[Auth] Kayıt başarılı, otomatik giriş yapılıyor...');
-                    socket.emit('login', { email: loginData.email, password: loginData.password });
+                    socket.emit('login', { email: emailInput.value.trim(), password: passwordInput.value });
                 }
             });
 
@@ -964,20 +801,20 @@
                     messages.scrollTop = messages.scrollHeight;
                 }
 
-                // 💡 YENİ: Aktif olmayan bir kanala mesaj geldiğinde, kanalı vurgula.
-                if (data.channel !== currentChatChannel && data.senderUid !== myUid) {
-                    // Eğer bir DM ise ve listede yoksa, önce oluştur.
-                    if (data.channel.startsWith('dm_')) {
-                        const uids = data.channel.replace('dm_', '').split('_');
-                        const otherUserUid = uids.find(uid => uid !== myUid);
-                        ensureDmChannelExists(otherUserUid, data.nickname);
+                // Eğer aktif olmayan bir DM'den mesaj geldiyse, sol panelde o DM'i oluştur ve vurgula
+                if (data.channel.startsWith('dm_') && data.channel !== currentChatChannel && data.senderUid !== myUid) {
+                    const uids = data.channel.replace('dm_', '').split('_');
+                    const otherUserUid = uids.find(uid => uid !== myUid);
+                    
+                    // DM kanalının sol panelde var olduğundan emin ol
+                    ensureDmChannelExists(otherUserUid, data.nickname);
+
+                    // DM kanalını vurgula
+                    const dmChannelElement = document.querySelector(`.channel-item[data-id="${data.channel}"]`);
+                    if (dmChannelElement) {
+                        dmChannelElement.classList.add('new-message-highlight');
                     }
 
-                    const channelElement = document.querySelector(`.channel-item[data-id="${data.channel}"]`);
-                    if (channelElement) {
-                        channelElement.classList.add('new-message-highlight');
-                    }
-                    
                     // Tarayıcı bildirimi göster
                     if (Notification.permission === "granted") {
                         new Notification(`Yeni DM: ${data.nickname}`, {
@@ -1065,20 +902,21 @@
 
             socket.on('login success', (data) => {
                 console.log('[Auth] Giriş başarılı:', data.nickname);
-                // 💡 DEĞİŞİKLİK: Sunucu seçim ekranı yerine doğrudan uygulamayı aç.
-                loginScreen.style.display = 'none'; 
-                appScreen.style.display = 'flex';
-
+                loginScreen.style.display = 'none';
                 myUid = data.uid; // Kendi UID'mizi sakla
+                
                 myAvatar.src = data.avatarUrl; 
                 myNickname.textContent = data.nickname;
-                myRole = data.role; // Rolümüzü sakla
 
-                // 💡 DEĞİŞİKLİK: Başlangıç verilerini (kanallar, kullanıcılar) istemek için sunucuya sinyal gönder.
-                socket.emit('request initial data');
+                // 💡 YENİ: Başlangıç durumunu ayarla
+                myStatusDot.className = 'status-online';
+                myStatusDot.id = 'my-status-dot';
+
+                messages.innerHTML = `<p class="system-msg">Hoş geldin ${data.nickname}, ana kanala katıldın.</p>`;
             });
 
             socket.on('initial data loaded', () => {
+                appScreen.style.display = 'flex'; // Uygulama ekranını göster
                 messageInput.disabled = false;
                 sendButton.disabled = false;
             });
@@ -1130,21 +968,13 @@
 
                                 let statusIcons = '';
                                 if (status.muted) statusIcons += '<span class="muted-icon">🎤</span>';
-                                if (status.deafened) statusIcons += '<span class="deafened-icon">🔇</span>';
+                                if (status.deafened) statusIcons += '<span class="deafened-icon">🔕</span>';
 
                                 userCard.innerHTML = `
                                     <img class="voice-user-avatar" src="${user.avatarUrl}" alt="${user.nickname}">
                                     <div class="voice-user-name">${user.nickname}</div>
                                     <div class="voice-user-icons">${statusIcons}</div>
                                 `;
-                                // 💡 YENİ: Sesli kullanıcı kartına sağ tıklama olayı
-                                userCard.addEventListener('contextmenu', (e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    const targetUid = user.uid;
-                                    openVoiceUserContextMenu(e, targetUid);
-                                });
-
                                 listContainer.appendChild(userCard);
                             }
                         }
@@ -1154,7 +984,6 @@
                             li.dataset.uid = user.uid;
                             li.dataset.nickname = user.nickname;
                             li.className = 'user-list-item';
-                            const roleTag = user.role ? `<span class="role-tag role-${user.role}">${user.role}</span>` : '';
                             li.innerHTML = `
                                 <img src="${user.avatarUrl}" alt="${user.nickname}" class="user-list-avatar" onerror="this.onerror=null;this.src='https://i.pravatar.cc/150?img=6';"> 
                                 <span class="user-list-name">${user.nickname}</span>
@@ -1166,7 +995,6 @@
                             li.dataset.uid = user.uid;
                             li.dataset.nickname = user.nickname;
                             li.className = 'user-list-item offline';
-                            const roleTag = user.role ? `<span class="role-tag role-${user.role}">${user.role}</span>` : '';
                             li.innerHTML = `
                                 <img src="${user.avatarUrl}" alt="${user.nickname}" class="user-list-avatar" onerror="this.onerror=null;this.src='https://i.pravatar.cc/150?img=6';"> 
                                 <span class="user-list-name">${user.nickname}</span>
@@ -1206,14 +1034,15 @@
                 }
             });
 
-            // 💡 YENİ: Gelişmiş DM geçmişi işleyici
-            socket.on('dm history', (conversations) => {
-                dmChannelsList.innerHTML = ''; // Listeyi temizle
-                conversations.forEach(convo => {
-                    const otherUserUid = convo.participants.find(uid => uid !== myUid);
+            socket.on('dm history', (dmChannelIds) => {
+                dmChannelIds.forEach(channelId => {
+                    const uids = channelId.replace('dm_', '').split('_');
+                    const otherUserUid = uids.find(uid => uid !== myUid);
                     const otherUser = userCache.get(otherUserUid);
                     if (otherUser) {
-                        addOrUpdateDmChannel(convo.id, otherUser.nickname, convo.lastMessage);
+                        ensureDmChannelExists(otherUser.uid, otherUser.nickname);
+                    } else {
+                        console.warn(`DM geçmişindeki ${otherUserUid} kullanıcısı cache'de bulunamadı.`);
                     }
                 });
             });
@@ -1253,7 +1082,7 @@
                 document.getElementById('chat-header').innerHTML = `<span style="color: #8a929b; margin-right: 5px;">@</span> ${headerText}`;
             } else {
                 const channelName = newChannelElement ? newChannelElement.querySelector('span').textContent : 'Sohbet';
-                document.getElementById('chat-header-title').textContent = `# ${channelName}`;
+                document.getElementById('chat-header').textContent = `# ${channelName}`;
             }
         }
 
@@ -1322,7 +1151,7 @@
             // ama buton gelecekteki geliştirmeler için yerinde duruyor.
             audioInputDeviceSelect.addEventListener('change', () => { localStorage.setItem('preferredMic', audioInputDeviceSelect.value); alert('Giriş cihazı bir sonraki sesli sohbete katıldığınızda değişecektir.'); });
             audioOutputDeviceSelect.addEventListener('change', () => { handleOutputDeviceChange(audioOutputDeviceSelect.value); localStorage.setItem('preferredSpeaker', audioOutputDeviceSelect.value); });
-            outputVolumeSlider.addEventListener('input', () => { handleOutputVolumeChange(outputVolumeSlider.value); localStorage.setItem('outputVolume', outputVolumeSlider.value); });
+            outputVolumeSlider.addEventListener('input', () => handleOutputVolumeChange(outputVolumeSlider.value));
 
             // Ayarlar menüsü kategori değiştirme
             document.querySelectorAll('.settings-category-btn').forEach(btn => {
@@ -1340,47 +1169,14 @@
                     if (paneId === 'audio-video-settings') {
                         populateAudioDevices();
                     }
-                    // 💡 YENİ: Eğer yönetim paneli açıldıysa, kullanıcıları listele
-                    if (paneId === 'admin-settings') {
-                        populateAdminUserList();
-                    }
                 });
-            });
-
-            // 💡 YENİ: Tema seçimi olay dinleyicileri
-            document.querySelectorAll('.theme-option').forEach(option => {
-                option.addEventListener('click', () => {
-                    const selectedTheme = option.dataset.theme;
-                    applyTheme(selectedTheme);
-                });
-            });
-
-            // 💡 YENİ: Yönetim paneli içindeki sekmeler arası geçiş
-            document.querySelectorAll('#admin-settings .settings-category-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const adminPaneId = btn.dataset.adminPane; 
-                    document.querySelectorAll('#admin-settings .settings-category-btn').forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-
-                    document.querySelectorAll('#admin-settings .settings-pane-content').forEach(p => p.classList.remove('active'));
-                    document.getElementById(adminPaneId).classList.add('active');
-                });
-            });
-
-            // 💡 YENİ: Yönetim paneli kısayol butonu
-            document.getElementById('admin-panel-shortcut-btn').addEventListener('click', () => {
-                openSettings();
-                document.querySelector('.settings-category-btn[data-pane="admin-settings"]').click(); 
             });
 
             // Event Delegation: Dinamik olarak eklenen elementler için tıklama olaylarını yönet
             const usersOnlineContainer = document.getElementById('users-online');
             usersOnlineContainer.addEventListener('click', (e) => {
-                const targetUserItem = e.target.closest('.user-list-item'); 
-                // 💡 YENİ: Sağdaki listeden bir kullanıcıya tıklandığında profilini göster.
-                if (targetUserItem) {
-                    showUserProfile(targetUserItem.dataset.uid);
-                }
+                const targetUserItem = e.target.closest('.user-list-item');
+                if (targetUserItem) openDmChannel(targetUserItem.dataset.uid, targetUserItem.dataset.nickname);
             });
             usersOnlineContainer.addEventListener('contextmenu', (e) => {
                 e.preventDefault();
@@ -1423,7 +1219,7 @@
                 e.target.value = ''; // Aynı dosyayı tekrar seçebilmek için input'u sıfırla
             });
 
-            // 💡 DÜZELTME: Mesajlar konteynerine olay delegasyonu
+            // Tepki ekleme butonu için olay delegasyonu
             messages.addEventListener('click', (e) => {
                 const messageElement = e.target.closest('.user-msg');
                 if (!messageElement) return;
@@ -1477,35 +1273,18 @@
                 }
             });
 
-            // 💡 YENİ: Mesaj arama işlevselliği
-            const clearSearchBtn = document.getElementById('clear-search-btn');
-            searchInput.addEventListener('input', () => {
-                const searchTerm = searchInput.value.toLowerCase();
-                clearSearchBtn.style.display = searchTerm ? 'block' : 'none';
-
-                document.querySelectorAll('#messages .user-msg, #messages .system-msg').forEach(msg => {
-                    if (!searchTerm) {
-                        msg.style.display = ''; // Arama boşsa her şeyi göster
-                        return;
-                    }
-                    if (msg.classList.contains('system-msg')) {
-                        msg.style.display = 'none'; // Sistem mesajlarını arama sırasında gizle
-                        return;
-                    }
-                    const msgText = msg.querySelector('.msg-text').textContent.toLowerCase();
-                    msg.style.display = msgText.includes(searchTerm) ? '' : 'none';
-                });
-            });
-            clearSearchBtn.addEventListener('click', () => {
-                searchInput.value = '';
-                searchInput.dispatchEvent(new Event('input')); // Arama olayını tetikle
+            // Yanıtı iptal etme
+            document.getElementById('cancel-reply-btn').addEventListener('click', () => {
+                cancelReplying();
             });
 
-            // 💡 YENİ: Profil modalını kapatma
-            userProfileModal.addEventListener('click', (e) => {
-                if (e.target === userProfileModal || e.target.id === 'profile-modal-close-btn') {
-                    userProfileModal.style.display = 'none';
-                }
+            // 💡 YENİ: Electron ana sürecinden gelen güncelleme olaylarını dinle
+            ipcRenderer.on('update-ready', () => {
+                document.getElementById('update-notification').style.display = 'block';
+            });
+
+            document.getElementById('restart-app-btn').addEventListener('click', () => {
+                ipcRenderer.send('restart-and-update');
             });
 
             document.addEventListener('click', () => { userContextMenu.style.display = 'none'; channelContextMenu.style.display = 'none'; statusMenu.style.display = 'none'; });
@@ -1577,11 +1356,6 @@
             socket.emit('update profile', { newNickname, newAvatarUrl: newAvatarUrl });
             
             // Başarılı güncelleme sonrası modalı kapat
-            // 💡 YENİ: Arayüzdeki ismi ve avatarı anında güncelle
-            myNickname.textContent = newNickname;
-            if (newAvatarUrl) {
-                myAvatar.src = newAvatarUrl;
-            }
             closeSettings();
         }
 
@@ -1620,89 +1394,6 @@
             document.querySelectorAll('audio').forEach(audio => audio.volume = volume);
         }
 
-        // 💡 YENİ: Tema uygulama ve kaydetme fonksiyonu
-        function applyTheme(themeName) {
-            document.body.dataset.theme = themeName;
-            localStorage.setItem('theme', themeName);
-
-            // Ayarlar menüsündeki aktif seçeneği güncelle
-            document.querySelectorAll('.theme-option').forEach(opt => {
-                opt.classList.remove('active');
-            });
-            document.querySelector(`.theme-option[data-theme="${themeName}"]`)?.classList.add('active');
-        }
-
-        // 💡 YENİ: Yönetim paneline kullanıcıları dolduran fonksiyon
-        async function populateAdminUserList() {
-            const container = document.getElementById('admin-user-list-container');
-            container.innerHTML = 'Yükleniyor...';
-
-            const allUsers = Array.from(userCache.values()).sort((a, b) => b.isOnline - a.isOnline || a.nickname.localeCompare(b.nickname));
-            container.innerHTML = '';
-
-            allUsers.forEach(user => {
-                if (user.uid === myUid) return; // Kendimizi listelemeyelim
-
-                const item = document.createElement('div');
-                item.className = 'admin-user-item';
-
-                // 💡 YENİ: Dinamik yetki kontrolü. myRole global değişkendir.
-                // Kurucu, kendisinden düşük seviyedeki herkesi yönetebilir.
-                // Admin, kendisinden düşük seviyedeki (sadece Üye) herkesi yönetebilir.
-                let canManage = false;
-                const myLevel = myRole === 'Kurucu' ? 3 : (myRole === 'Admin' ? 2 : 1);
-                const userLevel = user.role === 'Kurucu' ? 3 : (user.role === 'Admin' ? 2 : 1);
-
-                if (myLevel > userLevel) {
-                   canManage = true;
-                } else if (myRole === 'Admin' && user.role === 'Üye') {
-                    // Bu eski kontrol, yukarıdaki level kontrolü ile zaten sağlanıyor ama
-                    // daha açık olması için bırakılabilir veya kaldırılabilir.
-                    canManage = true;
-                }
-
-                const banButtonText = user.banned ? 'Yasağı Kaldır' : 'Yasakla';
-                const banButtonClass = user.banned ? 'unban-btn' : 'ban-btn';
-
-                item.innerHTML = `
-                    <div class="admin-user-info">
-                        <img src="${user.avatarUrl}" class="admin-user-avatar">
-                        <span>${user.nickname}</span>
-                    </div>
-                    <div class="admin-actions">
-                        <select class="admin-user-role-select" data-uid="${user.uid}" ${canManage ? '' : 'disabled'}>
-                            <option value="Üye" ${user.role === 'Üye' ? 'selected' : ''}>Üye</option>
-                            <option value="Admin" ${user.role === 'Admin' ? 'selected' : ''}>Admin</option>
-                            ${user.role === 'Kurucu' ? '<option value="Kurucu" selected>Kurucu</option>' : ''}
-                        </select>
-                        <button class="kick-btn" data-uid="${user.uid}" ${canManage ? '' : 'disabled'}>At</button>
-                        <button class="${banButtonClass}" data-uid="${user.uid}" ${canManage ? '' : 'disabled'}>${banButtonText}</button>
-                    </div>
-                `;
-                container.appendChild(item);
-            });
-
-            container.querySelectorAll('.admin-user-role-select').forEach(select => {
-                select.addEventListener('change', (e) => {
-                    socket.emit('admin:change-role', { targetUid: e.target.dataset.uid, newRole: e.target.value });
-                });
-            });
-
-            container.querySelectorAll('.kick-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    if (confirm(`${userCache.get(e.target.dataset.uid)?.nickname} kullanıcısını atmak istediğinizden emin misiniz?`)) {
-                        socket.emit('admin:kick', { targetUid: e.target.dataset.uid });
-                    }
-                });
-            });
-
-            container.querySelectorAll('.ban-btn, .unban-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    socket.emit('admin:toggle-ban', { targetUid: e.target.dataset.uid });
-                });
-            });
-        }
-
         function openDmChannel(targetUid, targetNickname) {
             if (targetUid === myUid) {
                 alert("Kendinize özel mesaj gönderemezsiniz.");
@@ -1718,23 +1409,16 @@
             const dmChannelId = `dm_${uids[0]}_${uids[1]}`;
 
             // Eğer DM kanalı soldaki listede yoksa oluştur
-            addOrUpdateDmChannel(dmChannelId, targetNickname, "Mesaj gönder...");
-            return dmChannelId;
-        }
-
-        // 💡 YENİ: DM kanalını listeye ekleyen veya güncelleyen fonksiyon
-        function addOrUpdateDmChannel(channelId, nickname, lastMessage) {
-            let dmItem = document.querySelector(`.channel-item[data-id="${channelId}"]`);
-            if (!dmItem) {
-                dmItem = document.createElement('div');
-                dmItem.className = 'channel-item dm-channel-item'; // Yeni stil sınıfı
-                dmItem.dataset.id = channelId;
+            if (!document.querySelector(`.channel-item[data-id="${dmChannelId}"]`)) {
+                const dmItem = document.createElement('div');
+                dmItem.className = 'channel-item';
+                dmItem.dataset.id = dmChannelId;
                 dmItem.dataset.type = 'chat';
-                dmItem.dataset.nickname = nickname;
-                dmChannelsList.prepend(dmItem); // Yeni konuşmaları en üste ekle
+                dmItem.dataset.nickname = targetNickname; // Header'da kullanmak için
+                dmItem.textContent = `@ ${targetNickname}`;
+                dmChannelsList.appendChild(dmItem);
             }
-            // İçeriği her zaman güncelle (son mesaj değişmiş olabilir)
-            dmItem.innerHTML = `<div class="channel-name">@ ${nickname}</div><div class="last-message">${lastMessage}</div>`;
+            return dmChannelId;
         }
         
         function addChannelToDOM(channel) {
@@ -1761,7 +1445,7 @@
                 channelItem.dataset.type = 'chat';
                 channelItem.innerHTML = `<span>${channel.name}</span>`;
                 textChannelsList.appendChild(channelItem);
-        } else if (channel.type === 'voice' && !document.querySelector(`.channel-item[data-id="${channel.id}"]`)) {
+            } else if (channel.type === 'voice') {
                 const group = document.createElement('div');
                 group.className = 'voice-channel-group';
                 channelItem.dataset.type = 'voice';
@@ -1781,8 +1465,8 @@
             if (!localStream) return;
             isMuted = !isMuted;
             localStream.getAudioTracks().forEach(track => { track.enabled = !isMuted; });
-            muteBtn.classList.toggle('active-status', isMuted); 
-            muteBtn.querySelector('span').textContent = isMuted ? '🅾️' : '🎙️';
+            muteBtn.classList.toggle('active-status', isMuted);
+            muteBtn.querySelector('span').textContent = isMuted ? '🔇' : '🎤';
             if (isMuted && isSpeaking) { socket.emit('toggle speaking', false); } else if (!isMuted && isSpeaking) { socket.emit('toggle speaking', true); }
             socket.emit('toggle status', { status: 'mute', value: isMuted });
         }
@@ -1794,8 +1478,8 @@
                     audioElement.muted = isDeafened; 
                 }
             });
-            deafenBtn.classList.toggle('active-status', isDeafened); 
-            deafenBtn.querySelector('span').textContent = isDeafened ? '🔇' : '🎧';
+            deafenBtn.classList.toggle('active-status', isDeafened);
+            deafenBtn.querySelector('span').textContent = isDeafened ? '🔕' : '🎧';
             socket.emit('toggle status', { status: 'deafen', value: isDeafened });
         }
 
@@ -1821,9 +1505,9 @@
 
             isMuted = false; isDeafened = false;
             muteBtn.classList.remove('active-status');
-            muteBtn.querySelector('span').textContent = '🎙️';
+            muteBtn.querySelector('span').textContent = '🎤';
             deafenBtn.classList.remove('active-status');
-            deafenBtn.querySelector('span').textContent = '🎧'; 
+            deafenBtn.querySelector('span').textContent = '🎧';
         }
 
         const iceConfiguration = { iceServers: [ { urls: 'stun:stun.l.google.com:19302' } ] };
@@ -1852,33 +1536,38 @@
         }
 
         function joinVoiceChannel(channelId) {
-    const preferredMic = localStorage.getItem('preferredMic');
-    const constraints = { audio: { deviceId: preferredMic ? { exact: preferredMic } : undefined, echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false };
-
-    navigator.mediaDevices.getUserMedia(constraints)
+navigator.mediaDevices.getUserMedia({ 
+        audio: {
+            echoCancellation: true, // Yankı iptali
+            noiseSuppression: true, // Gürültü engelleme
+            sampleRate: 44100 // Yüksek kalite ses
+        }, 
+        video: false 
+    })
     .then(stream => {
+        // BAŞARILI DURUM
         localStream = stream;
+        
+        // Ses kontrol düğmelerini etkinleştir (UI güncellenir)
         muteBtn.disabled = false;
         deafenBtn.disabled = false;
         disconnectVoiceBtn.disabled = false;
+
         voiceControlsBar.style.display = 'flex';
         const channelElement = document.querySelector(`.channel-item[data-id="${channelId}"]`);
-        voiceChannelNameSpan.textContent = `🔊 ${channelElement ? channelElement.querySelector('span').textContent.trim() : channelId}`;
-        channelElement.classList.add('active-channel');
+        voiceChannelNameSpan.textContent = `🔊 ${channelElement ? channelElement.textContent.trim() : channelId}`;
 
         socket.emit('join voice channel', channelId); 
         startVolumeDetection();
 
     })
     .catch(err => {
-        console.error('Mikrofon Erişim Hatası:', err.name, err.message);
-        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-            alert('Mikrofon İzni Reddedildi!\n\nSesli sohbeti kullanabilmek için işletim sisteminizin gizlilik ayarlarından AuraChat için mikrofon erişimine izin vermeniz gerekmektedir.\n\n- Windows: Ayarlar > Gizlilik > Mikrofon\n- macOS: Sistem Ayarları > Gizlilik ve Güvenlik > Mikrofon');
-        } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-            alert('Mikrofon Bulunamadı!\n\nLütfen bilgisayarınıza bir mikrofonun bağlı olduğundan ve düzgün çalıştığından emin olun.');
-        } else {
-            alert(`Beklenmedik bir mikrofon hatası oluştu: ${err.name}\n\nLütfen mikrofonunuzun başka bir uygulama (Discord, Zoom vb.) tarafından kullanılmadığından emin olun ve uygulamayı yeniden başlatmayı deneyin.`);
-        }
+        // HATA DURUMU
+        console.error('Mikrofon Erişim Hatası (CODE):', err.name, err.message);
+        
+        // Kullanıcıya Windows'ta izinleri kontrol etmesini öneren bir mesaj göster
+        alert(`Mikrofon erişimi reddedildi veya cihaz bulunamadı.\n\nLütfen şunları kontrol edin:\n1. Başka bir uygulamanın (Discord, Zoom) açık olmadığından.\n2. Windows/MacOS Gizlilik Ayarlarında Mikrofon izninin açık olduğundan.`);
+        
         leaveVoiceChannel(channelId); // Hata durumunda UI'ı temizle
     });
 }
@@ -1899,10 +1588,6 @@
                 remoteAudio.id = `audio-${userId}`;
                 remoteAudio.autoplay = true;
                 remoteAudio.volume = localStorage.getItem('outputVolume') || 1; // Kayıtlı ses seviyesini uygula
-                
-                const userSocketId = Object.keys(onlineUsers).find(sid => onlineUsers[sid].uid === userId);
-                if (userSocketId && userVolumes[userSocketId]) remoteAudio.volume = userVolumes[userSocketId];
-
                 if (remoteAudio.setSinkId) {
                     remoteAudio.setSinkId(localStorage.getItem('preferredSpeaker') || 'default');
                 }
@@ -1945,7 +1630,6 @@
             if (data.replyTo) {
                 const originalMessage = document.getElementById(`message-${data.replyTo}`);
                 if (originalMessage) {
-                    // Yanıt bloğunda rol göstermeye gerek yok, sade kalsın.
                     const originalAuthor = originalMessage.querySelector('.nickname').textContent;
                     const originalText = originalMessage.querySelector('.msg-text').textContent;
                     replyHtml = `<div class="reply-block" data-original-message-id="${data.replyTo}">
@@ -1965,13 +1649,11 @@
                 messageHtml += '<span class="edited-label">(düzenlendi)</span>';
             }
 
-            const roleTag = data.role ? `<span class="role-tag role-${data.role}">${data.role}</span>` : '';
-
             item.innerHTML = `
                 <img src="${data.avatarUrl}" alt="${data.nickname}" class="msg-avatar" onerror="this.onerror=null;this.src='https://i.pravatar.cc/150?img=6';">
                 <div class="msg-content"> 
                     ${replyHtml}
-                    <div class="msg-meta"><span class="nickname">${data.nickname}</span>${roleTag}<span class="timestamp">${new Date(data.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span></div>
+                    <div class="msg-meta"><span class="nickname">${data.nickname}</span><span class="timestamp">${new Date(data.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span></div>
                     <div class="msg-text">${messageHtml}</div>
                     <div class="message-reactions"></div>
                 </div>
@@ -2004,43 +1686,14 @@
             // UI'ı sıfırla
             appScreen.style.display = 'none';
             loginScreen.style.display = 'flex';
-            messageInput.value = '';
-            messages.innerHTML = `<p class="system-msg">Uygulama yükleniyor...</p>`; 
-            textChannelsList.innerHTML = '<div class="channel-item active-channel" data-type="chat" data-id="ana-sohbet-kanali"># genel-sohbet</div>';
+            messageInput.value = ''; 
+            messages.innerHTML = `<p class="system-msg">Uygulama yükleniyor...</p>`;
+            textChannelsList.innerHTML = '<div class="channel-item active-channel" data-type="chat" data-id="ana-sohbet-kanali"># geenel-sohbet</div>';
             voiceChannelsList.innerHTML = '';
             dmChannelsList.innerHTML = '';
             userList.innerHTML = '';
             passwordInput.value = ''; // Güvenlik için şifre alanını temizle
             errorDisplay.textContent = ''; // Giriş ekranındaki hata mesajını temizle
-        }
-
-        // 💡 YENİ: Sesli kullanıcı sağ tık menüsünü açan ve yöneten fonksiyon
-        function openVoiceUserContextMenu(event, targetUid) {
-            const slider = document.getElementById('voice-user-volume-slider');
-            
-            // Slider'ın mevcut değerini ayarla
-            slider.value = userVolumes[targetUid] !== undefined ? userVolumes[targetUid] : 1;
-
-            // Slider olay dinleyicisini ayarla
-            slider.oninput = () => {
-                const newVolume = parseFloat(slider.value);
-                userVolumes[targetUid] = newVolume;
-                localStorage.setItem('userVolumes', JSON.stringify(userVolumes)); 
-
-                // İlgili kullanıcının audio elementini bul ve sesini ayarla
-                const targetSocketId = Array.from(userCache.values()).find(u => u.uid === targetUid)?.socketId;
-                if (targetSocketId) {
-                    const audioEl = document.getElementById(`audio-${targetSocketId}`);
-                    if (audioEl) {
-                        audioEl.volume = newVolume;
-                    }
-                }
-            };
-
-            // Menüyü göster
-            voiceUserContextMenu.style.display = 'block';
-            voiceUserContextMenu.style.left = `${event.pageX}px`;
-            voiceUserContextMenu.style.top = `${event.pageY}px`;
         }
 
         function renderReactions(container, messageId, reactions) {
@@ -2064,4 +1717,8 @@
         }
     </script>
 </body>
+<script>
+
+</script>
+
 </html>
