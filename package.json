@@ -39,16 +39,6 @@
       "appPackageUrl": "https://github.com/jester-web/aurachat-final-repo/releases/download/v${version}/AuraChat-${version}.nsis.7z",
       "artifactName": "${productName}-Web-Setup-${version}.${ext}"
     },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "installerIcon": "build/installerIcon.ico",
-      "uninstallerIcon": "build/uninstallerIcon.ico",
-      "installerSidebar": "build/installerSidebar.bmp",
-      "uninstallerSidebar": "build/uninstallerSidebar.bmp",
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
-    },
     "win": {
       "target": [
         {
@@ -60,16 +50,11 @@
       ]
     },
     "files": [
-      "index.html",
-      "main.js",
-      "package.json",
-      "package-lock.json",
-      "splash.html",
-      "icon.png",
-      "assets/**/*",
-      "node_modules/socket.io-client/**/*"
-],
-
+      "!dist/",
+      "!build/",
+      "!node_modules/",
+      "**/*"
+    ],
     
     "publish": [
       {
